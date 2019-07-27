@@ -10,8 +10,8 @@
 
 class opIndex : public Broker {
     static const int MAX_ATTS = 101;
-    static const int MAX_SUBS = 2000001;
-    static const int SEGMENTS = 32;
+    static const int MAX_SUBS = 200001;
+    static const int SEGMENTS = 16;
     static const int MAX_SIGNATURE = 61;
 
     vector<ConElement> data[MAX_ATTS][3][SEGMENTS][MAX_SIGNATURE];

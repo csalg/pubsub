@@ -113,7 +113,6 @@ void runAlgo(json j)
 
     for (std::vector<string>::iterator it = algos.begin(); it != algos.end(); ++it) {
         std::cout << *it << endl;
-
         if ((*it).compare("htree") == 0) {
             std::ifstream i("./config/algos/htree.json");
             json htreeConfig;
@@ -125,28 +124,16 @@ void runAlgo(json j)
             toRun.push_back(make_pair("siena", new Siena()));
         } else if ((*it).compare("rein") == 0) {
             toRun.push_back(make_pair("rein", new Rein(valDom)));
+        } else if ((*it).compare("opIndex") == 0) {
+            toRun.push_back(make_pair("opIndex", new opIndex()));
+        } else if ((*it).compare("tama") == 0) {
+            std::ifstream i("./config/algos/tama.json");
+            json tamaConfig;
+            i >> tamaConfig;
+            int levels = tamaConfig["levels"];
+            toRun.push_back(make_pair("tama", new Tama(atts, valDom, levels) ));
         }
     }
-
-//        if (algo.compare("opIndex") == 0) {
-//            cout << "Running opIndex" << endl;
-//            opIndex newA;
-//            newA.calcFrequency(gen.subList);
-//            a = newA;
-//            return a;
-//        }
-
-//        if (algo.compare("tama") == 0) {
-//            cout << "Running TAMA" << endl;
-////        std::ifstream i("./config/algos/tama.json");
-////        json tamaConfig;
-////        i >> tamaConfig;
-////        int levels = tamaConfig["levels"];
-////        cout << levels << endl;
-//            Tama newA(atts, valDom, 10);
-//            a = newA;
-//            return a;
-//        }
 
     while(!toRun.empty()) {
         cout << "Running " << (toRun.back()).first << endl;
