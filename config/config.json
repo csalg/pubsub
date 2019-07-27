@@ -1,0 +1,13 @@
+{
+	"algos" : ["htree", "tama","rein", "siena"],
+	"number_of_subscriptions": 20000,
+	"number_of_events": 200,
+	"number_of_dimensions": 20,
+	"number_of_subscription_attributes": 10,
+	"number_of_event_attributes": 20,
+	"cardinality_of_values": 20,
+	"attribute_distribution": 0,
+	"value_distribution": 0,
+	"alpha": 1000000,
+	"width": 0.5
+}
