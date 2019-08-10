@@ -1,7 +1,3 @@
-//
-// Created by Work on 2019-07-26.
-//
-
 #ifndef PUBSUB_DATA_STRUCTURE_H
 #define PUBSUB_DATA_STRUCTURE_H
 
@@ -68,8 +64,7 @@ struct attAndCount{
 };
 
 
-class Broker{
-public:
+struct Broker{
     Broker () {};
     virtual void insert(IntervalSub sub) {
     };
