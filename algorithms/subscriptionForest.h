@@ -9,8 +9,8 @@
 #include <cstring>
 #include "../common/data_structure.h"
 #include "./subscriptionForest/AVLTree.h"
-#include "./subscriptionForest/IntervalNode.h"
-#include "./subscriptionForest/IntervalTree.h"
+//#include "./subscriptionForest/IntervalNode.h"
+#include "./subscriptionForest/CenteredIntervalTree.h"
 
 std::random_device rd;     // only used once to initialise (seed) engine
 std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
@@ -18,14 +18,14 @@ std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in thi
 class SubscriptionForest : public Broker {
     unsigned m;
     unsigned dimensions;
-    array<IntervalSub, 100> subsVector;
+    std::vector<IntervalSub> subsStore;
     std::uniform_int_distribution<unsigned> uni; // guaranteed unbiased
-    std::vector<IntervalTree<IntervalSub>> subs;
+    std::vector<CenteredIntervalTree<int>> subs;
 public:
     SubscriptionForest(unsigned dimensions, unsigned m) : m(m), dimensions(dimensions), Broker() {
         uni = std::uniform_int_distribution<unsigned>(0,m-1);
         for (int i = 0; i<dimensions; i++){
-            static IntervalTree<IntervalSub> itree;
+            static CenteredIntervalTree<int> itree;
             subs.push_back(itree);
         }
     };
@@ -35,10 +35,8 @@ public:
 //    };
 
     void insert(IntervalSub sub) {
-//        subsVector.push_back(sub);
-//        IntervalSub* subRef = ;
-//        cout << "Inserting sub: " << subRef << endl;
-        IntervalSub* subRef = &sub;
+
+        subsStore.push_back(sub);
 
         auto randomConstraint = uni(rng);
 //        cout << sub.size << " " << randomConstraint << endl;
@@ -47,7 +45,7 @@ public:
         int lo=(sub.constraints[randomConstraint]).lowValue, hi = (sub.constraints[randomConstraint]).highValue;
 //        cout << "subs.size() is " << subs.size() << ". Inserted subscription. Attribute: " << randomAttribute << ", lo: " << lo << " hi: " << hi << endl;
 
-        (subs.at(randomAttribute)).insert(lo,hi,subRef);
+        (subs.at(randomAttribute)).insert(lo,hi,subsStore.size()-1);
     };
 
     void match(const Pub &pub, int &matchSubs, const vector<IntervalSub> &subList){
@@ -73,7 +71,7 @@ public:
             auto tree = subs.at(  ((pub.pairs).at(i)).att );
 //            cout << "Looking in tree: " << ((pub.pairs).at(i)).att << ". It's size is: " << tree.size << endl;
 //            tree.print();
-            tree.match( ((pub.pairs).at(i)).value, pub, matchSubs );
+            tree.match( ((pub.pairs).at(i)).value, pub, matchSubs, subsStore);
 //            cout << "Intersections on attribute " <<  ((pub.pairs).at(i)).att << ": " << matchingSubs.size() << endl;
         }
 

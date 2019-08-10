@@ -11,13 +11,13 @@
 #include "IntervalNode.h"
 
 template<typename T>
-struct IntervalTree {
+struct CenteredIntervalTree {
     IntervalNode<T> *root = nullptr;
     int size = 0;
 
-    IntervalTree() = default;
+    CenteredIntervalTree() = default;
 
-    IntervalTree(int lo, int hi, T new_element) {
+    CenteredIntervalTree(int lo, int hi, T new_element) {
         delete root;
         root = new IntervalNode<T>(lo, hi, new_element);
         size++;

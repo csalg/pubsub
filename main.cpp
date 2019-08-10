@@ -55,7 +55,7 @@ void runAlgos(json j, string outputFileName) {
                     toRun.push_back(make_pair("siena", new Siena()));
                 } else if ((*it).compare("subscriptionForest") == 0) {
                     const unsigned constAtts = atts;
-                toRun.push_back(make_pair("subscriptionForest", new SubscriptionForest(constAtts,m) ));
+                toRun.push_back(make_pair("subscriptionForest", new SubscriptionForest(atts,m) ));
                 } else if ((*it).compare("rein") == 0) {
                     toRun.push_back(make_pair("rein", new Rein(valDom)));
                 } else if ((*it).compare("opIndex") == 0) {

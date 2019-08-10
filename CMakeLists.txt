@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(pubsub)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -O2")
 
 add_executable(pubsub main.cpp
         common/generator.h
@@ -24,5 +25,6 @@ add_executable(pubsub main.cpp
         algorithms/tama.cpp
         algorithms/subscriptionForest/AVLTree.h
         algorithms/subscriptionForest/IntervalNode.h
+        algorithms/subscriptionForest/CenteredIntervalTree.h
         algorithms/subscriptionForest/IntervalTree.h
         algorithms/subscriptionForest.h)
