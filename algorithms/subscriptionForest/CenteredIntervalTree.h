@@ -6,11 +6,11 @@
 #define BST_CENTEREDINTERVALTREE_H
 
 #include <iostream>
-#include <map>
+//#include <map>
 #include <iterator>
 #include <queue>
+#include <map>
 #include "../../common/data_structure.h"
-
 
 template<typename T>
 struct CenteredIntervalTree {
@@ -18,8 +18,8 @@ struct CenteredIntervalTree {
         Node *left = nullptr, *right = nullptr, *parent = nullptr;
         int height = 0;
         int center;
-        std::multimap<int,std::pair<int, T>> loMap;
-        std::multimap<int,std::pair<int, T>> hiMap;
+        multimap<int,std::pair<int, T>> loMap;
+        multimap<int,std::pair<int, T>> hiMap;
 
         Node() = default;
 
@@ -31,6 +31,7 @@ struct CenteredIntervalTree {
         void insert(int lo, int hi, T data){
 //            static auto loPair = make_pair(lo, data);
 //            static auto hiPair = make_pair(hi, data);
+            if (hi<lo) hi=lo;
             loMap.insert(make_pair(lo, make_pair(hi, data)));
             hiMap.insert(make_pair(hi, make_pair(lo, data)));
         };
@@ -39,11 +40,11 @@ struct CenteredIntervalTree {
         void print() {
             std::cout << this << " Parent: " << this->parent <<" C: " << center << ", H: " << height << ", #Data: " << loMap.size() << ", Elements: lo:";
             for (auto it=loMap.begin(); it!=loMap.end();it++){
-                cout << it->first << " => ("<< it->second.first << ", " << it->second.second << ") ";
+                cout << it->first << " => ("<< it->second.first << ", " << &(it->second.second )<< ") ";
             }
             cout << " hi: ";
             for (auto it=hiMap.begin(); it!=hiMap.end();it++){
-                cout << "("<< it->second.first << ", " << it->second.second << ") ";
+                cout << "("<< it->second.first << ", " << &(it->second.second) << ") ";
             }
             cout << "  |  ";
         }
@@ -128,25 +129,35 @@ struct CenteredIntervalTree {
         // anything that is in root and whose hi is greater than or eq to newRoot's should be moved to root.
         typename std::multimap<int,pair<int,T>>::iterator it,itlow,itup;
 
-        itlow = root->loMap.lower_bound(newRoot->center);
-        itup = root->loMap.begin();
+        itlow = root->loMap.begin();
+        itup = root->loMap.lower_bound(newRoot->center);
 
-        if (itlow != itup){
-            if (itlow->first > newRoot->center) itlow--;
-        }
+//        if (itlow != itup){
+//            if (itlow->first > newRoot->center) itlow--;
+//        }
 
-        for ( it=itlow; it!=itup; --it) {
-//            std::cout << "Moving to:";
-//            newRoot->print();
-//            cout<<endl;
-//            std::cout << "From:";
-//            root->print();
-//            cout<<endl;
-//
-//            std::cout << it->first << " => " << it->second.first << ", " << it->second.second << endl;
-            newRoot->insert(it->second.first, it->first, it->second.second );
+        vector<int> futureDel;
+
+        for ( it=itlow; it!=itup; ++it) {
+            if (it->first < newRoot->center) {
+//                std::cout << "Moving to:";
+//                newRoot->print();
+//                cout << endl;
+//                std::cout << "From:";
+//                root->print();
+//                cout << endl;
+
+//                std::cout << it->first << " => " << it->second.first << ", " << it->second.second << endl;
+                newRoot->insert(it->second.first, it->first, it->second.second);
+                futureDel.push_back(it->second.first);
+            }
         }
-        root->loMap.erase(itup,itlow);
+        root->loMap.erase(itlow,itup);
+
+        for (int hiNum : futureDel) {
+//            cout << "Deleting: " << loNum << endl;
+            root->hiMap.erase(hiNum);
+        }
 
         return newRoot;
     }
@@ -155,7 +166,7 @@ struct CenteredIntervalTree {
         return (node == nullptr) ? 0 : node->height;
     }
 
-    Node *insertInner(Node* &parent, Node* &node, int lo, int hi, T data) {
+    Node *insertInner(Node* &parent, Node* &node, int lo, int hi, T &data) {
         // Base case.
         if (node == nullptr) {
 //            then we create a new node because no previous node overlapped.
@@ -185,6 +196,7 @@ struct CenteredIntervalTree {
 
 //        Now we balance like a normal AVL tree.
         int balance = height(node->left) - height(node->right);
+//        cout << "balance: " << balance << endl;
         if (balance > 1) {
 //            cout << "rotating";
             if (height((node->left)->left) >= height((node->left)->right)) {
@@ -210,7 +222,7 @@ struct CenteredIntervalTree {
 
     }
 
-    void insert(int lo, int hi,T data){
+    void insert(int lo, int hi,T &data){
         size++;
         root = insertInner(root,root, lo, hi, data);
     }
@@ -243,6 +255,7 @@ struct CenteredIntervalTree {
 
     bool matchAPubWithASub(const Pub &pub,  IntervalSub &sub){
 //        cout << "Possible match! " << endl;
+//        cout << "Val:  " << pub.pairs[0].value << ". lo: " << sub.constraints[0].lowValue << ". hi: " << sub.constraints[0].highValue << endl;
         for (auto constraint : sub.constraints){
 //            cout << "Val:  " << pub.pairs[constraint.att].value << ". lo: " << constraint.lowValue << ". hi: " << constraint.highValue << endl;
             if (   pub.pairs[constraint.att].value < constraint.lowValue \
@@ -268,7 +281,7 @@ struct CenteredIntervalTree {
 
         return true;
     }
-    void matchInner(Node* &root,int val, const Pub &pub, int &matchSubs, std::vector<IntervalSub> &subsStore) {
+    void matchInner(Node* &root,int val, const Pub &pub, int &matchSubs) {
 //        cout << "DebuggingInner: " ;
 //        root->print();
 
@@ -282,7 +295,7 @@ struct CenteredIntervalTree {
             for (auto it=root->hiMap.begin(); it!=root->hiMap.end(); ++it) {
 //                subsStore[it->second.second];
 
-                if (matchAPubWithASub(pub,subsStore.at(it->second.second))) matchSubs++;
+                if (matchAPubWithASub(pub,it->second.second)) matchSubs++;
 //                matchSubs++;
             }
 
@@ -290,33 +303,37 @@ struct CenteredIntervalTree {
             // look in the loMap for anything that starts before val.
             // recurse to root->left
 
-            auto itlow = root->loMap.lower_bound(root->center);
-            if (itlow->first > val) itlow--;
-
-            for (auto it=itlow; it!=root->loMap.begin(); --it) {
+//            auto itlow = (root->loMap.lower_bound(root->center));
+//            if (itlow->first > val) itlow--;
+            for (auto it=root->loMap.begin(); it!=root->loMap.lower_bound(root->center); ++it) {
 //                subsStore[it->second.second];
-                if (matchAPubWithASub(pub,subsStore.at(it->second.second))) matchSubs++;
+//                cout << "Looking in lo" << endl;
+//                cout << (it->first) << " " << (it->second.first) << " ";
+//                cout << it->second.second.id << endl;
+//                cout << (it->second.second.constraints[0]).lowValue << endl;
+//                cout << (it->second.second.constraints[0]).highValue << endl;
+                if (matchAPubWithASub(pub,it->second.second)) matchSubs++;
 //                matchSubs++;
             }
 
-            return matchInner(root->left,val,pub, matchSubs, subsStore);
+            return matchInner(root->left,val,pub, matchSubs);
 
         } else {
             // look in the hiMap for anything that ends after val
             // recurse to root->right
             for (auto it=root->hiMap.lower_bound(root->center); it!=root->hiMap.end(); ++it) {
 //                subsStore[it->second.second];
-                if (matchAPubWithASub(pub,subsStore.at(it->second.second))) matchSubs++;
+                if (matchAPubWithASub(pub,it->second.second)) matchSubs++;
 //                matchSubs++;
             }
-            return matchInner(root->right,val,pub, matchSubs, subsStore);
+            return matchInner(root->right,val,pub, matchSubs);
 
         }
     }
 
-    void match(int val, const Pub  &pub, int &matchSubs, std::vector<IntervalSub> &subsStore) {
+    void match(int val, const Pub  &pub, int &matchSubs) {
 //        cout << "Debugging: " ;
-        return matchInner(root, val,pub, matchSubs, subsStore);
+        return matchInner(root, val,pub, matchSubs);
     };
 
 

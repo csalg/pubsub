@@ -17,7 +17,7 @@ This is a fork of [xizeroplus/matching-algorithms](https://github.com/xizeroplus
 
 ## Build
 
-Before building, make sure the [JSON for Modern C++ library](https://github.com/nlohmann/json) is installed on your system. 
+Before building, make sure the dependencies [JSON for Modern C++](https://github.com/nlohmann/json) and [Boost](https://www.boost.org/) are installed on your system. 
 
 Use CMake in the usual way:
 

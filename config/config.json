@@ -2,7 +2,7 @@
 	"algos" : ["subscriptionForest", "siena", "tama", "rein"],
 	"number_of_subscriptions": [10000, 10000, 10],
 	"number_of_events": 1,
-	"number_of_dimensions": [100,500,10],
+	"number_of_dimensions": [1,1,10],
 	"percentage_of_subscription_attributes": 100,
 	"percentage_of_event_attributes": 100,
 	"attribute_distribution": 0,
