@@ -11,13 +11,12 @@
 #include "../common/chrono_time.h"
 #include "../common/util.h"
 #include "../common/data_structure.h"
+#include "../params.h"
 
 using namespace std;
 
 
 class Siena : public Broker {
-    static const int MAX_SUBS = 50000;
-    static const int MAX_ATTS = 1;
     int counter[MAX_SUBS];
     vector<IntervalCombo> data[MAX_ATTS];
 public:

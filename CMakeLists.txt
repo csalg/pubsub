@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(pubsub)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -O2")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -O3")
 
 add_executable(
         pubsub
@@ -31,4 +31,4 @@ add_executable(
         algorithms/subscriptionForest/IntervalTree.h
         algorithms/subscriptionForest.h
         algorithms/subscriptionClusterTree.h
-        )
+        params.h)

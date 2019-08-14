@@ -4,6 +4,7 @@
 
 #ifndef PUBSUB_SUBSCRIPTIONCLUSTERTREE_H
 #define PUBSUB_SUBSCRIPTIONCLUSTERTREE_H
+#include "../params.h"
 
 
 #include<vector>
@@ -19,22 +20,18 @@
 //std::random_device rd;     // only used once to initialise (seed) engine
 //std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
 
-const unsigned MAX_D = 1;
-const unsigned MAX_SPAN = 20;
-const unsigned MAX_CARDINALITY = 1000000000;
-
 typedef struct Node;
 typedef struct NodeList;
 
 struct Node {
     NodeList* child = nullptr;
-    int lo[MAX_D] = {0};
-    int hi[MAX_D] = {0};
-    int center[MAX_D] = {0};
+    int lo[MAX_ATTS] = {0};
+    int hi[MAX_ATTS] = {0};
+    int center[MAX_ATTS] = {0};
     int width = 0;
 
     Node() {
-        std::fill_n(lo, MAX_D, MAX_CARDINALITY);
+        std::fill_n(lo, MAX_ATTS, MAX_CARDINALITY);
     };
 
     Node(IntervalSub &sub){
@@ -52,21 +49,21 @@ struct Node {
     Node(Node &node1, Node &node2);
 
     void expand(Node &node){
-        for (auto i=0; i !=MAX_D; i++){
+        for (auto i=0; i !=MAX_ATTS; i++){
             if (node.lo[i] < this->lo[i]){
                 width += this->lo[i] - node.lo[i];
                 this->lo[i] = node.lo[i];
             }
         }
 
-        for (auto i=0; i !=MAX_D; i++){
+        for (auto i=0; i !=MAX_ATTS; i++){
             if (node.hi[i] > this->hi[i]){
                 width += node.hi[i] - this->hi[i];
                 this->hi[i] = node.hi[i];
             }
         }
 
-        for (auto i=0; i !=MAX_D; i++){
+        for (auto i=0; i !=MAX_ATTS; i++){
             this->center[i] = this->lo[i] + (this->hi[i] - this->lo[i])/2;
         }
     }
@@ -123,7 +120,7 @@ struct NodeList {
 
     long double dist(Node &a, Node &b){
         unsigned sum = 0;
-        for (unsigned i = 0; i != MAX_D; i++){
+        for (unsigned i = 0; i != MAX_ATTS; i++){
             sum += pow((a.center[i] - b.center[i]),2);
         }
         return sqrt(sum);
@@ -176,7 +173,7 @@ void Node::match(const Pub &pub, int &matchSubs) {
 
 void Node::print(){
     int children = hasChildren() ? child->size() : 0;
-    for (auto i =0; i!=MAX_D; i++){
+    for (auto i =0; i!=MAX_ATTS; i++){
         cout << "(" << lo[i] << ", " << center[i] << ", " << hi[i] << ")";
     }
     cout << ", Width: " << width
@@ -375,15 +372,15 @@ void NodeList::cluster(unsigned leaveOutRate){
 
 
 Node::Node(Node &node1, Node &node2){
-        for (auto i =0; i != MAX_D; i++){
+        for (auto i =0; i != MAX_ATTS; i++){
         lo[i] = std::min(node1.lo[i], node2.lo[i]);
         }
-        for (auto i =0; i != MAX_D; i++){
+        for (auto i =0; i != MAX_ATTS; i++){
         hi[i] = std::max(node1.hi[i], node2.hi[i]);
         }
 
         width=0;
-        for (auto i=0; i !=MAX_D; i++){
+        for (auto i=0; i !=MAX_ATTS; i++){
         center[i] = lo[i]+(hi[i] - lo[i])/2;
         width =+ hi[i] - lo[i];
         }
@@ -403,8 +400,8 @@ void NodeList::count(int &amount){
 
 //
 //int* mergeLo(Node* &node1, Node*&node2){
-//    int newLo[MAX_D];
-//    for (auto i =0; i != MAX_D; i++){
+//    int newLo[MAX_ATTS];
+//    for (auto i =0; i != MAX_ATTS; i++){
 //        newLo[i] = std::min(node1->lo[i], node2->lo[i]);
 //    }
 //
@@ -412,8 +409,8 @@ void NodeList::count(int &amount){
 //};
 //
 //int* mergeHi(Node* &node1, Node*&node2){
-//    int newHi[MAX_D];
-//    for (auto i =0; i != MAX_D; i++){
+//    int newHi[MAX_ATTS];
+//    for (auto i =0; i != MAX_ATTS; i++){
 //        newHi[i] = std::max(node1->hi[i], node2->hi[i]);
 //    }
 //    return newHi;

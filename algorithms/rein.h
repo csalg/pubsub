@@ -11,11 +11,9 @@
 #include "../common/chrono_time.h"
 #include "../common/util.h"
 #include "../common/data_structure.h"
+#include "../params.h"
 
 class Rein : public Broker {
-    static const int MAX_SUBS = 10000;
-    static const int MAX_ATTS = 10;
-    static const int MAX_BUCKS = 500;
     int valDom, buckStep, bucks;
     vector<Combo> data[MAX_ATTS][2][MAX_BUCKS];    // 0:left parenthesis, 1:right parenthesis
 public:

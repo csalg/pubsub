@@ -8,10 +8,12 @@
 #include "../common/chrono_time.h"
 #include "../common/util.h"
 #include "../common/data_structure.h"
+#include "../params.h"
+
 
 using namespace std;
 
-const int MAX_SUBS = 200000;
+//const int MAX_SUBS = 200000;
 
 class Htree : public Broker  {
     int cells, atts, mLevel, valDis, valDom;

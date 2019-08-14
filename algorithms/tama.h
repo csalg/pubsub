@@ -7,13 +7,13 @@
 #include "../common/chrono_time.h"
 #include "../common/util.h"
 #include "../common/data_structure.h"
+#include "../params.h"
+
 using namespace std;
 
 
 
 class Tama : public Broker  {
-    static const int MAX_SUBS = 100000;
-    static const int MAX_ATTS = 100;
     int mLevel, atts, valDom;
     int nodeCounter;
     int *lchild, *rchild, *mid;

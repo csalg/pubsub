@@ -35,3 +35,4 @@ cmake-build-debug/*
 vendor/*
 .idea/*
 *.csv
+TODO.md

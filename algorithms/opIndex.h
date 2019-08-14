@@ -7,13 +7,10 @@
 #include "../common/chrono_time.h"
 #include "../common/util.h"
 #include "../common/data_structure.h"
+#include "../params.h"
+
 
 class opIndex : public Broker {
-    static const int MAX_ATTS = 1;
-    static const int MAX_SUBS = 50000;
-    static const int SEGMENTS = 16;
-    static const int MAX_SIGNATURE = 61;
-
     vector<ConElement> data[MAX_ATTS][3][SEGMENTS][MAX_SIGNATURE];
     bool sig[MAX_ATTS][3][SEGMENTS][MAX_SIGNATURE];
     int counter[MAX_SUBS];
