@@ -12,8 +12,8 @@ using namespace std;
 
 
 class Tama : public Broker  {
-    static const int MAX_SUBS = 2000000;
-    static const int MAX_ATTS = 101;
+    static const int MAX_SUBS = 100000;
+    static const int MAX_ATTS = 100;
     int mLevel, atts, valDom;
     int nodeCounter;
     int *lchild, *rchild, *mid;

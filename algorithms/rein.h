@@ -13,8 +13,8 @@
 #include "../common/data_structure.h"
 
 class Rein : public Broker {
-    static const int MAX_SUBS = 2000001;
-    static const int MAX_ATTS = 101;
+    static const int MAX_SUBS = 10000;
+    static const int MAX_ATTS = 10;
     static const int MAX_BUCKS = 500;
     int valDom, buckStep, bucks;
     vector<Combo> data[MAX_ATTS][2][MAX_BUCKS];    // 0:left parenthesis, 1:right parenthesis

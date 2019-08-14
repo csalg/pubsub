@@ -16,14 +16,14 @@ std::random_device rd;     // only used once to initialise (seed) engine
 std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
 
 class SubscriptionForest : public Broker {
-    unsigned m;
+    unsigned cons;
     unsigned dimensions;
 //    std::vector<IntervalSub> subsStore;
     std::uniform_int_distribution<unsigned> uni; // guaranteed unbiased
     std::vector<CenteredIntervalTree<IntervalSub>> subs;
 public:
-    SubscriptionForest(unsigned dimensions, unsigned m) : m(m), dimensions(dimensions), Broker() {
-        uni = std::uniform_int_distribution<unsigned>(0,m-1);
+    SubscriptionForest(unsigned dimensions, unsigned cons) : cons(cons), dimensions(dimensions), Broker() {
+        uni = std::uniform_int_distribution<unsigned>(0,cons-1);
         for (int i = 0; i<dimensions; i++){
             static CenteredIntervalTree<IntervalSub> itree;
             subs.push_back(itree);

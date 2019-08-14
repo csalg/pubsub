@@ -9,8 +9,8 @@
 #include "../common/data_structure.h"
 
 class opIndex : public Broker {
-    static const int MAX_ATTS = 101;
-    static const int MAX_SUBS = 200001;
+    static const int MAX_ATTS = 1;
+    static const int MAX_SUBS = 50000;
     static const int SEGMENTS = 16;
     static const int MAX_SIGNATURE = 61;
 

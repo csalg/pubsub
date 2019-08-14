@@ -16,8 +16,8 @@ using namespace std;
 
 
 class Siena : public Broker {
-    static const int MAX_SUBS = 200000;
-    static const int MAX_ATTS = 2000;
+    static const int MAX_SUBS = 50000;
+    static const int MAX_ATTS = 1;
     int counter[MAX_SUBS];
     vector<IntervalCombo> data[MAX_ATTS];
 public:
