@@ -32,6 +32,8 @@ make
 make install
 ```
 
+The above also provided as a bash script *make.sh*.
+
 ## Usage
 
 #### Configuration
