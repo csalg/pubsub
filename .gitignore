@@ -36,3 +36,4 @@ vendor/*
 .idea/*
 *.csv
 TODO.md
+.DS_Store
