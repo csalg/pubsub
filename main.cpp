@@ -13,7 +13,7 @@
 #include "./algorithms/siena.h"
 #include "./algorithms/tama.h"
 #include "./algorithms/subscriptionForest.h"
-#include "algorithms/subscriptionClusterTree.h"
+#include "./algorithms/subscriptionClusterTree.h"
 
 
 using namespace std;
@@ -47,46 +47,46 @@ void runAlgos(json j, string outputFileName) {
 
                 for (std::vector<string>::iterator it = algos.begin(); it != algos.end(); ++it) {
                     std::cout << *it << endl;
-                    if ((*it).compare("htree") == 0) {
+                    if ((*it).compare("H-Tree") == 0) {
                         std::ifstream i("./config/algos/htree.json");
                         json htreeConfig;
                         i >> htreeConfig;
                         int levels = htreeConfig["levels"];
                         int cells = htreeConfig["cells"];
-                        toRun.push_back(make_pair("h-tree", new Htree(atts, levels, cells, valDis, valDom)));
-                    } else if ((*it).compare("siena") == 0) {
-                        toRun.push_back(make_pair("siena", new Siena()));
+                        toRun.push_back(make_pair("H-Tree", new Htree(atts, levels, cells, valDis, valDom)));
+                    } else if ((*it).compare("Siena") == 0) {
+                        toRun.push_back(make_pair("Siena", new Siena()));
                     }
 //                    else if ((*it).compare("subscriptionBTree") == 0) {
 //                        toRun.push_back(make_pair("subscriptionBTree", new SubscriptionClusterTree(20)));
 //                    }
-                    else if ((*it).compare("subscriptionForest") == 0)
+                    else if ((*it).compare("Subscription Forest") == 0)
                     {
                         const unsigned constAtts = atts;
-                        toRun.push_back(make_pair("subscriptionForest", new SubscriptionForest(atts, cons)));
+                        toRun.push_back(make_pair("Subscription Forest", new SubscriptionForest(atts, cons)));
                     }
-                    else if ((*it).compare("subscriptionBTree") == 0)
+                    else if ((*it).compare("SCTree") == 0)
                     {
-                        std::ifstream i("./config/algos/subscriptionBTree.json");
+                        std::ifstream i("./config/algos/SCTree.json");
                         json algoConfig;
                         i >> algoConfig;
-                        unsigned leaveOutRate = algoConfig["leaveOutRate"];
-                        toRun.push_back(make_pair("subscriptionBTree", new SubscriptionClusterTree(leaveOutRate)));
+                        unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
+                        toRun.push_back(make_pair("SCTree", new SubscriptionClusterTree(leaveOutRate)));
                     }
-                    else if ((*it).compare("rein") == 0)
+                    else if ((*it).compare("REIN") == 0)
                     {
-                        toRun.push_back(make_pair("rein", new Rein(valDom)));
+                        toRun.push_back(make_pair("REIN", new Rein(valDom)));
                     }
-                    else if ((*it).compare("opIndex") == 0) {
-                        toRun.push_back(make_pair("opIndex", new opIndex()));
+                    else if ((*it).compare("OpIndex") == 0) {
+                        toRun.push_back(make_pair("OpIndex", new opIndex()));
                     }
-                    else if ((*it).compare("tama") == 0)
+                    else if ((*it).compare("TAMA") == 0)
                     {
                         std::ifstream i("./config/algos/tama.json");
                         json tamaConfig;
                         i >> tamaConfig;
                         int levels = tamaConfig["levels"];
-                        toRun.push_back(make_pair("tama", new Tama(atts, valDom, levels)));
+                        toRun.push_back(make_pair("TAMA", new Tama(atts, valDom, levels)));
                     }
 
 

@@ -75,8 +75,8 @@ struct Node {
     void print();
 
     void match(const Pub &pub, int &matchSubs);
-
-};
+    bool match(IntervalSub &sub);
+    };
 
 struct NodeList {
     vector<Node> nodes;
@@ -93,26 +93,57 @@ struct NodeList {
         nodes.emplace_back(sub); // Node is constructed from sub
     }
 
-    void insert(Node &node, unsigned leaveOutRate){
+    void insert(Node &node){
         if (nodes.size() >= MAX_SPAN) {
-            this->cluster(leaveOutRate);
+            this->cluster();
         }
         push(node);
     }
 
-    void insert(NodeList &newNodes, unsigned leaveOutRate){
+    void insert(NodeList &newNodes){
         for (auto node : newNodes.nodes){
             nodes.push_back(node); // Node is copied
         }
 
         if (nodes.size() >= MAX_SPAN) {
-            this->cluster(leaveOutRate);
+            this->cluster();
         }
     }
 
-    void insert(IntervalSub &sub, unsigned leaveOutRate){
+    void insert(IntervalSub &sub){
+        if (nodes.size() <= SPAN_AFTER_CLUSTERING){
+            push(sub);
+            return;
+        }
+
+        bool found = 0;
+        unsigned short nearest_center = 0;
+        long double distance = INFINITY;
+
+        for (auto i=0; i!= size(); i++){
+            if (nodes.at(i).hasChildren()){
+                if (nodes.at(i).match(sub)){
+                        nodes.at(i).child->insert(sub);
+                        return;
+
+//                        Old code looked at all possible places to fit the thing.
+//                    auto new_distance =dist(nodes.at(i), sub);
+//                    if (new_distance < distance) {
+//                        distance = new_distance;
+//                        nearest_center=i;
+//                        found=1;
+//                    }
+                }
+            }
+        }
+
+//        if (found){
+//            nodes.at(nearest_center).child->insert(sub);
+//            return;
+//        }
+
         if (nodes.size() >= MAX_SPAN) {
-            this->cluster(leaveOutRate);
+            this->cluster();
         }
 //        cout << nodes.size() << " ";
         push(sub);
@@ -126,7 +157,20 @@ struct NodeList {
         return sqrt(sum);
     }
 
-    void cluster(unsigned leaveOutRate);
+    long double dist(Node &a, IntervalSub &sub){
+
+        int sub_centre[MAX_ATTS] = {0};
+        for (auto interval : sub.constraints){
+            sub_centre[interval.att] = interval.lowValue +  (interval.lowValue +  interval.highValue)/2;
+        }
+        unsigned sum = 0;
+        for (unsigned i = 0; i != MAX_ATTS; i++){
+            sum += pow((a.center[i] - sub_centre[i]),2);
+        }
+        return sqrt(sum);
+    }
+
+    void cluster();
 
     void match(const Pub &pub, int &matchSubs){
 //        cout << nodes.size() << endl;
@@ -171,6 +215,18 @@ void Node::match(const Pub &pub, int &matchSubs) {
     matchSubs++;
 }
 
+bool Node::match(IntervalSub &sub) {
+
+    for (auto cons : sub.constraints){
+        if (cons.lowValue < lo[cons.att]) return 0;
+    }
+
+    for (auto cons : sub.constraints){
+        if (cons.highValue > hi[cons.att]) return 0;
+    }
+    return 1;
+}
+
 void Node::print(){
     int children = hasChildren() ? child->size() : 0;
     for (auto i =0; i!=MAX_ATTS; i++){
@@ -180,7 +236,7 @@ void Node::print(){
          << ", Children? " << children << endl;
 }
 
-Node *merge(Node &node1, Node &node2, unsigned leaveOutRate){
+Node *merge(Node &node1, Node &node2){
     if ( !node1.hasChildren() && !node2.hasChildren() )
     {
         // Both are simply subscriptions.
@@ -204,7 +260,7 @@ Node *merge(Node &node1, Node &node2, unsigned leaveOutRate){
 //        node1.print();
 //        node2.print();
         node2.expand(node1);
-        node2.child->insert(node1, leaveOutRate);
+        node2.child->insert(node1);
 //        node2.print();
         return &node2;
     }
@@ -215,7 +271,7 @@ Node *merge(Node &node1, Node &node2, unsigned leaveOutRate){
 //        node1.print();
 //        node2.print();
         node1.expand(node2);
-        node1.child->insert(node2, leaveOutRate);
+        node1.child->insert(node2);
 //        node2.print();
         return &node1;
     }
@@ -244,7 +300,7 @@ Node *merge(Node &node1, Node &node2, unsigned leaveOutRate){
 //        cout << "bigNode expanded again, let's see" << endl;
 //        bigNode.print();
 
-        bigNode.child->insert(*(smallNode.child), leaveOutRate);
+        bigNode.child->insert(*(smallNode.child));
 //        cout << " doesn't happen here" << endl;
 
 //        delete &smallNode;
@@ -253,33 +309,34 @@ Node *merge(Node &node1, Node &node2, unsigned leaveOutRate){
 }
 
 
-void NodeList::cluster(unsigned leaveOutRate){
+void NodeList::cluster(){
 //    this->print();
 //    cout << "Clustering" << endl;
-    // Sort nodes by width.
-    sort(nodes.begin(), nodes.end(), [](Node a, Node b) {return a.width > b.width; });
 
-    const unsigned len = ((100-leaveOutRate)*this->size())/100; // How many nodes are we actually considering?
+//     Sort nodes by width.
+    sort(nodes.begin(), nodes.end(), [](Node a, Node b) {return a.width < b.width; });
+//    this->print();
+
+    const unsigned len = this->size() - LEAVE_OUT; // How many nodes are we actually considering?
 //    cout << "len: " << len << endl;
-    const unsigned k   = (MAX_SPAN*(50 - leaveOutRate))/100; // How many centers do we need?
     vector<bool> centers(len,0); // Bitset to mark selected centers.
-    auto distance = new long double[len];
-    auto nearest_center = new unsigned[len];
-
+    auto distance_and_centers = new pair<long double,unsigned short>[len];
+//    auto nearest_center = new unsigned short[len];
 
     // Set distances to infinity.
     for (auto i=0; i!=len; i++){
-        distance[i] = INFINITY;
+        (distance_and_centers[i]).first = INFINITY;
     }
 
     unsigned next_center = rand() % len;
 //    cout << "Current center is " << next_center << endl;
-    unsigned further_distance = 0;
+    long double further_distance = 0;
     centers[next_center] = 1;
+
     for(auto i=0; i!=len;i++){
-        nearest_center[i]=next_center;
+        distance_and_centers[i].second =next_center;
     }
-    for (auto i = 1; i!= k; i++){
+    for (auto i = 1; i!= K; i++){
         further_distance = 0;
         unsigned current_center = next_center;
         // calculate distances
@@ -290,7 +347,7 @@ void NodeList::cluster(unsigned leaveOutRate){
 
             if (!centers[j]){
 
-//            cout << "k is: " << k;
+//            cout << "K is: " << K;
 //            cout << " i is: " << i;
 //            cout << " current center is: " << next_center;
 //            cout << " j is: " << j << endl;
@@ -304,14 +361,14 @@ void NodeList::cluster(unsigned leaveOutRate){
 //            cout << " new dist is: " << new_dist << endl;
 //            cout << " old dist is: " << distance[j] << endl;
 
-            if (distance[j] > new_dist){
-                distance[j] = new_dist;
-                nearest_center[j] = current_center;
+            if (distance_and_centers[j].first > new_dist){
+                distance_and_centers[j].first = new_dist;
+                distance_and_centers[j].second = current_center;
             }
 
-            if (distance[j] > further_distance){
+            if (distance_and_centers[j].first > further_distance){
 //                cout << changing
-                further_distance = distance[j];
+                further_distance = distance_and_centers[j].first;
                 next_center = j;
             }
         }
@@ -322,35 +379,68 @@ void NodeList::cluster(unsigned leaveOutRate){
 //    for (auto center : centers) cout << center;
 //    cout << endl;
 //
-//    cout << "Distances array" << endl;
-//    for (int i=0; i != len; i++ ) cout << distance[i] << " ";
+//    cout << "Distances and centers array" << endl;
+//    for (int i=0; i != len; i++ ) cout << "(" << distance_and_centers[i].first << ", " << distance_and_centers[i].second << "), ";
 //    cout << endl;
 //
+//    sort(distance_and_centers, distance_and_centers+len, [](pair<long double,unsigned short> a, pair<long double,unsigned short> b) {return a.first < b.first; });
+//
+//    cout << "Distances and centers array sorted in ascending order" << endl;
+//    for (int i=0; i != len; i++ ) cout << "(" << distance_and_centers[i].first << ", " << distance_and_centers[i].second << "), ";
+//    cout << endl;
+
 //    cout << "Nearest center array" << endl;
 //    for (int i=0; i != len; i++ ) cout << nearest_center[i] << " ";
 //    cout << endl;
 
     vector<Node> newNodes;
+    newNodes.reserve(MAX_SPAN);
+    vector<bool> toAssign; // Bitset to mark selected centers.
 
-    for (auto i = 0; i!=len; i++){
-        if (!centers[i]){
-//            cout << "Setting center " << nearest_center[i] << endl;
-            nodes.at(nearest_center[i]) = *(merge(nodes[i], nodes[nearest_center[i]], leaveOutRate));
-        }
+    for (auto i =0; i!= nodes.size(); i++){
+        toAssign.push_back(centers[i]);
     }
+//    cout << "toAssign before" << endl;
+//    for (auto center : toAssign) cout << center;
+//    cout << endl;
 
-    for (auto i = 0; i!=len; i++) {
-        if (centers[i]){
+    unsigned short toAssignAfter = 0;
+//    cout << toAssignAfter << endl;
+
+    for (auto i = 0; i!=nodes.size(); i++){
+        if ((!centers[i]) && (toAssignAfter < SPAN_AFTER_CLUSTERING)){
+//            cout << "i: " << i << ". Setting center: "  << distance_and_centers[i].second << endl;
+            nodes.at(distance_and_centers[i].second) = *(merge(nodes[i], nodes[distance_and_centers[i].second]));
+            toAssign.at(i) = 0;
+            toAssignAfter++;
+//            cout << toAssignAfter << endl;
+
+            continue;
+        }
+        toAssign.at(i) = 1;
+
+//        if (centers[i]) toAssign.at(i) = 1;
+    }
+//    cout << "toAssign after" << endl;
+//    for (auto center : toAssign) cout << center;
+//    cout << endl;
+
+    for (auto i = 0; i!=nodes.size(); i++) {
+        if (toAssign[i]){
+//            cout << "Assigning " << i << endl;
             newNodes.push_back(nodes.at(i));
         }
     }
 //    cout << "Here are the new nodes:" << endl;
 //    for (auto node : newNodes) node.print();
-
+//
         nodes.clear();
+        nodes.reserve(MAX_SPAN);
         nodes.insert(nodes.begin(),newNodes.begin(), newNodes.end());
-//        delete newNodes;
-//    cout << "Finished successfully. k was " << k << endl;
+        std::vector<Node>().swap(newNodes);
+
+////        delete newNodes;
+//    cout << "Finished successfully. K was " << K << endl;
 //    cout << "Total nodes now: " << nodes.size() <<". Here are the new nodes:" << endl;
 //    int amount = 0;
 //    this->count(amount);
@@ -366,12 +456,15 @@ void NodeList::cluster(unsigned leaveOutRate){
 //            cout<<endl;
 //        }
 //    }
+//    this->print();
+//    assert(0);
 
 }
 
 
 
-Node::Node(Node &node1, Node &node2){
+Node::Node(Node &node1, Node &node2)
+{
         for (auto i =0; i != MAX_ATTS; i++){
         lo[i] = std::min(node1.lo[i], node2.lo[i]);
         }
@@ -398,27 +491,8 @@ void NodeList::count(int &amount){
     }
 }
 
-//
-//int* mergeLo(Node* &node1, Node*&node2){
-//    int newLo[MAX_ATTS];
-//    for (auto i =0; i != MAX_ATTS; i++){
-//        newLo[i] = std::min(node1->lo[i], node2->lo[i]);
-//    }
-//
-//    return newLo;
-//};
-//
-//int* mergeHi(Node* &node1, Node*&node2){
-//    int newHi[MAX_ATTS];
-//    for (auto i =0; i != MAX_ATTS; i++){
-//        newHi[i] = std::max(node1->hi[i], node2->hi[i]);
-//    }
-//    return newHi;
-//};
-
 
 class SubscriptionClusterTree : public Broker {
-//    unsigned short m;
     std::uniform_int_distribution<unsigned> uni; // guaranteed unbiased
     NodeList *root = new NodeList();
     unsigned leaveOutRate;
@@ -428,7 +502,7 @@ public:
 
     void insert(IntervalSub sub) {
 //        cout << "Inserting" << endl;
-        root->insert(sub, leaveOutRate);
+        root->insert(sub);
     };
 
     void match(const Pub &pub, int &matchSubs, const vector<IntervalSub> &subList){
@@ -437,7 +511,6 @@ public:
 //        print();
 //        cout<<endl;
 //        cout<<endl;
-
         root->match(pub,matchSubs);
 
     }
