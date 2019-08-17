@@ -30,7 +30,6 @@ add_executable(
         algorithms/subscriptionForest/CenteredIntervalTree.h
         algorithms/subscriptionForest/IntervalTree.h
         algorithms/subscriptionForest.h
-        algorithms/subscriptionClusterTree.h
+        algorithms/SCTree.h
         params.h
-        params.cpp
-)
+        algorithms/SCTreeParallel.h)

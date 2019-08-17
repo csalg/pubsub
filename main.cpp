@@ -13,7 +13,8 @@
 #include "./algorithms/siena.h"
 #include "./algorithms/tama.h"
 #include "./algorithms/subscriptionForest.h"
-#include "./algorithms/subscriptionClusterTree.h"
+#include "./algorithms/SCTree.h"
+#include "./algorithms/SCTreeParallel.h"
 
 
 using namespace std;
@@ -72,6 +73,14 @@ void runAlgos(json j, string outputFileName) {
                         i >> algoConfig;
                         unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
                         toRun.push_back(make_pair("SCTree", new SubscriptionClusterTree(leaveOutRate)));
+                    }
+                    else if ((*it).compare("SCTreeParallel") == 0)
+                    {
+                        std::ifstream i("./config/algos/SCTree.json");
+                        json algoConfig;
+                        i >> algoConfig;
+                        unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
+                        toRun.push_back(make_pair("SCTreeParallel", new sctp::SubscriptionClusterTree(leaveOutRate)));
                     }
                     else if ((*it).compare("REIN") == 0)
                     {
@@ -136,8 +145,11 @@ void runAlgos(json j, string outputFileName) {
                         Util::WriteData(outputFileName.c_str(), content);
 
                         toRun.erase(toRun.begin());
+
                     }
                 }
+                std::vector<IntervalSub>().swap(gen.subList); // Preventing memory leaks.
+                std::vector<Pub>().swap(gen.pubList); // Preventing memory leaks.
             }
         }
     }

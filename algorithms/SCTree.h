@@ -2,8 +2,8 @@
 // Created by Work on 2019-08-11.
 //
 
-#ifndef PUBSUB_SUBSCRIPTIONCLUSTERTREE_H
-#define PUBSUB_SUBSCRIPTIONCLUSTERTREE_H
+#ifndef PUBSUB_SCTREE_H
+#define PUBSUB_SCTREE_H
 #include "../params.h"
 
 
@@ -20,8 +20,8 @@
 //std::random_device rd;     // only used once to initialise (seed) engine
 //std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
 
-typedef struct Node;
-typedef struct NodeList;
+struct Node;
+struct NodeList;
 
 struct Node {
     NodeList* child = nullptr;
@@ -76,10 +76,11 @@ struct Node {
 
     void match(const Pub &pub, int &matchSubs);
     bool match(IntervalSub &sub);
-    };
+};
 
 struct NodeList {
     vector<Node> nodes;
+    vector<size_t> nodesWithChildren;
 
     int size(){
         return nodes.size();
@@ -120,11 +121,11 @@ struct NodeList {
         unsigned short nearest_center = 0;
         long double distance = INFINITY;
 
-        for (auto i=0; i!= size(); i++){
-            if (nodes.at(i).hasChildren()){
+        for (auto j=0; j!= nodesWithChildren.size(); j++){
+            auto i = nodesWithChildren[j];
                 if (nodes.at(i).match(sub)){
-                        nodes.at(i).child->insert(sub);
-                        return;
+                    nodes.at(i).child->insert(sub);
+                    return;
 
 //                        Old code looked at all possible places to fit the thing.
 //                    auto new_distance =dist(nodes.at(i), sub);
@@ -134,7 +135,6 @@ struct NodeList {
 //                        found=1;
 //                    }
                 }
-            }
         }
 
 //        if (found){
@@ -189,7 +189,7 @@ struct NodeList {
 
     void count(int &amount);
 
-    };
+};
 
 void Node::match(const Pub &pub, int &matchSubs) {
 //    cout << "Matched inside" << endl;
@@ -336,6 +336,8 @@ void NodeList::cluster(){
     for(auto i=0; i!=len;i++){
         distance_and_centers[i].second =next_center;
     }
+    Timer centersStart;
+
     for (auto i = 1; i!= K; i++){
         further_distance = 0;
         unsigned current_center = next_center;
@@ -357,24 +359,26 @@ void NodeList::cluster(){
 //            nodes.at(j).print();
 
 
-            auto new_dist = dist(nodes.at(current_center), nodes.at(j));
+                auto new_dist = dist(nodes.at(current_center), nodes.at(j));
 //            cout << " new dist is: " << new_dist << endl;
 //            cout << " old dist is: " << distance[j] << endl;
 
-            if (distance_and_centers[j].first > new_dist){
-                distance_and_centers[j].first = new_dist;
-                distance_and_centers[j].second = current_center;
-            }
+                if (distance_and_centers[j].first > new_dist){
+                    distance_and_centers[j].first = new_dist;
+                    distance_and_centers[j].second = current_center;
+                }
 
-            if (distance_and_centers[j].first > further_distance){
+                if (distance_and_centers[j].first > further_distance){
 //                cout << changing
-                further_distance = distance_and_centers[j].first;
-                next_center = j;
+                    further_distance = distance_and_centers[j].first;
+                    next_center = j;
+                }
             }
-        }
         }
         centers[next_center] = 1;
     }
+//    cout << "Finding centers took " << centersStart.elapsed_nano()/1000000 << "ms." << endl;
+
 //    cout << "Centers array" << endl;
 //    for (auto center : centers) cout << center;
 //    cout << endl;
@@ -393,6 +397,8 @@ void NodeList::cluster(){
 //    for (int i=0; i != len; i++ ) cout << nearest_center[i] << " ";
 //    cout << endl;
 
+    Timer memoryT;
+
     vector<Node> newNodes;
     newNodes.reserve(MAX_SPAN);
     vector<bool> toAssign; // Bitset to mark selected centers.
@@ -403,6 +409,7 @@ void NodeList::cluster(){
 //    cout << "toAssign before" << endl;
 //    for (auto center : toAssign) cout << center;
 //    cout << endl;
+
 
     unsigned short toAssignAfter = 0;
 //    cout << toAssignAfter << endl;
@@ -424,20 +431,29 @@ void NodeList::cluster(){
 //    cout << "toAssign after" << endl;
 //    for (auto center : toAssign) cout << center;
 //    cout << endl;
+    nodesWithChildren.clear();
 
     for (auto i = 0; i!=nodes.size(); i++) {
         if (toAssign[i]){
 //            cout << "Assigning " << i << endl;
             newNodes.push_back(nodes.at(i));
+            if (nodes.at(i).hasChildren()) nodesWithChildren.push_back(newNodes.size()-1);
+
         }
     }
+
+//    cout << "nodesWithChildren: ";
+//    for (auto parent : nodesWithChildren) cout << parent << " ";
+//    cout << endl;
+
 //    cout << "Here are the new nodes:" << endl;
 //    for (auto node : newNodes) node.print();
 //
-        nodes.clear();
-        nodes.reserve(MAX_SPAN);
-        nodes.insert(nodes.begin(),newNodes.begin(), newNodes.end());
-        std::vector<Node>().swap(newNodes);
+    nodes.clear();
+    nodes.reserve(MAX_SPAN);
+    nodes.insert(nodes.begin(),newNodes.begin(), newNodes.end());
+    std::vector<Node>().swap(newNodes);
+//    cout << "Memory operations took " << centersStart.elapsed_nano()/1000000 << "ms." << endl;
 
 ////        delete newNodes;
 //    cout << "Finished successfully. K was " << K << endl;
@@ -465,23 +481,23 @@ void NodeList::cluster(){
 
 Node::Node(Node &node1, Node &node2)
 {
-        for (auto i =0; i != MAX_ATTS; i++){
+    for (auto i =0; i != MAX_ATTS; i++){
         lo[i] = std::min(node1.lo[i], node2.lo[i]);
-        }
-        for (auto i =0; i != MAX_ATTS; i++){
+    }
+    for (auto i =0; i != MAX_ATTS; i++){
         hi[i] = std::max(node1.hi[i], node2.hi[i]);
-        }
+    }
 
-        width=0;
-        for (auto i=0; i !=MAX_ATTS; i++){
+    width=0;
+    for (auto i=0; i !=MAX_ATTS; i++){
         center[i] = lo[i]+(hi[i] - lo[i])/2;
         width =+ hi[i] - lo[i];
-        }
+    }
 
-        // Both are simply subscriptions.
-        this->child = new NodeList;
-        child->push(node1);
-        child->push(node2);
+    // Both are simply subscriptions.
+    this->child = new NodeList;
+    child->push(node1);
+    child->push(node2);
 }
 
 void NodeList::count(int &amount){
@@ -554,4 +570,4 @@ public:
     ;
 
 };
-#endif //PUBSUB_SUBSCRIPTIONCLUSTERTREE_H
+#endif //PUBSUB_SCTREE_H
