@@ -1,0 +1,3 @@
+/home/work/cpp/pubsub/build/CMakeFiles/rebuild_cache.dir
+/home/work/cpp/pubsub/build/CMakeFiles/pubsub.dir
+/home/work/cpp/pubsub/build/CMakeFiles/edit_cache.dir

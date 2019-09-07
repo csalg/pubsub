@@ -13,8 +13,8 @@
 #include "./algorithms/siena.h"
 #include "./algorithms/tama.h"
 #include "./algorithms/subscriptionForest.h"
-#include "./algorithms/SCTree.h"
-#include "./algorithms/SCTreeParallel.h"
+#include "algorithms/ACTree.h"
+//#include "./algorithms/SCTreeParallel.h"
 
 
 using namespace std;
@@ -36,11 +36,11 @@ void runAlgos(json j, string outputFileName) {
     for (double width = widths.at(0); width <= widths.at(1); width += widths.at(2)) {
         for (unsigned subs = subsRange.at(0); subs <= subsRange.at(1); subs += subsRange.at(2)) {
             for (unsigned atts = attsRange.at(0); atts <= attsRange.at(1); atts += attsRange.at(2)) {
-                const unsigned cons = (atts * consPer) / 100;           // Number of constraints(predicates) in one sub.
+                const unsigned constraints_ = (atts * consPer) / 100;           // Number of constraints(predicates) in one sub.
                 const unsigned m = (atts * mPer) / 100;              // Number of constraints in one pub.
 
-                cout << "Dimensions: " << atts << ", Width: " << width <<", Constraints: " << cons << ", Subscriptions: " << subs << endl;
-                intervalGenerator gen(subs, pubs, atts, cons, m, attDis, valDis, valDom, alpha, width);
+                cout << "Dimensions: " << atts << ", Width: " << width <<", Constraints: " << constraints_ << ", Subscriptions: " << subs << endl;
+                intervalGenerator gen(subs, pubs, atts, constraints_, m, attDis, valDis, valDom, alpha, width);
                 gen.GenSubList();
                 gen.GenPubList();
 
@@ -64,24 +64,24 @@ void runAlgos(json j, string outputFileName) {
                     else if ((*it).compare("Subscription Forest") == 0)
                     {
                         const unsigned constAtts = atts;
-                        toRun.push_back(make_pair("Subscription Forest", new SubscriptionForest(atts, cons)));
+                        toRun.push_back(make_pair("Subscription Forest", new SubscriptionForest(atts, constraints_)));
                     }
-                    else if ((*it).compare("SCTree") == 0)
+                    else if ((*it).compare("ACTree") == 0)
                     {
-                        std::ifstream i("./config/algos/SCTree.json");
+                        std::ifstream i("./config/algos/ACTree.json");
                         json algoConfig;
                         i >> algoConfig;
                         unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
-                        toRun.push_back(make_pair("SCTree", new SubscriptionClusterTree(leaveOutRate)));
+                        toRun.push_back(make_pair("ACTree", new AdaptiveClusterTree(leaveOutRate, constraints_)));
                     }
-                    else if ((*it).compare("SCTreeParallel") == 0)
-                    {
-                        std::ifstream i("./config/algos/SCTree.json");
-                        json algoConfig;
-                        i >> algoConfig;
-                        unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
-                        toRun.push_back(make_pair("SCTreeParallel", new sctp::SubscriptionClusterTree(leaveOutRate)));
-                    }
+//                    else if ((*it).compare("SCTreeParallel") == 0)
+//                    {
+//                        std::ifstream i("./config/algos/SCTree.json");
+//                        json algoConfig;
+//                        i >> algoConfig;
+//                        unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
+//                        toRun.push_back(make_pair("SCTreeParallel", new sctp::SubscriptionClusterTree(leaveOutRate)));
+//                    }
                     else if ((*it).compare("REIN") == 0)
                     {
                         toRun.push_back(make_pair("REIN", new Rein(valDom)));
@@ -136,7 +136,7 @@ void runAlgos(json j, string outputFileName) {
                                 (toRun.back()).first + "," +
                                 Util::Int2String(subs) + "," +
                                 Util::Int2String(atts) + "," +
-                                Util::Int2String(cons) + "," +
+                                Util::Int2String(constraints_) + "," +
                                 Util::Int2String(m) + "," +
                                 std::to_string(width) + "," +
                                 Util::Double2String(Util::mean(insertTimeList)) + "," +

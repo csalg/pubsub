@@ -142,7 +142,7 @@ namespace sctp {
                         return;
 
 //                        Old code looked at all possible places to fit the thing.
-//                    auto new_distance =dist(nodes.at(i), sub);
+//                    auto new_distance =cost(nodes.at(i), sub);
 //                    if (new_distance < distance) {
 //                        distance = new_distance;
 //                        nearest_center=i;
@@ -356,8 +356,8 @@ namespace sctp {
 //    this->print();
 //    cout << "Clustering" << endl;
 
-//     Sort nodes by width.
-//    sort(nodes.begin(), nodes.end(), [](Node a, Node b) {return a.width < b.width; });
+//     Sort nodes by logVolume.
+//    sort(nodes.begin(), nodes.end(), [](Node a, Node b) {return a.logVolume < b.logVolume; });
 //    this->print();
 
         const unsigned len = this->size();
@@ -388,7 +388,7 @@ namespace sctp {
 //                unsigned &next_center,
 //                long double &further_distance
 //        ) {
-//            auto new_dist = dist(nodes.at(current_center), nodes.at(j));
+//            auto new_dist = cost(nodes.at(current_center), nodes.at(j));
 //
 ////            cout << " new dist is: " << new_dist << endl;
 ////            cout << " old dist is: " << distance[j] << endl;
@@ -438,8 +438,8 @@ namespace sctp {
 
                         auto new_dist = dist(nodes.at(current_center), nodes.at(j));
 
-//            cout << " new dist is: " << new_dist << endl;
-//            cout << " old dist is: " << distance[j] << endl;
+//            cout << " new cost is: " << new_dist << endl;
+//            cout << " old cost is: " << distance[j] << endl;
 
                         if (distance_and_centers[j].first > new_dist) {
                             distance_and_centers[j] = make_pair(new_dist, current_center);
@@ -448,7 +448,7 @@ namespace sctp {
 //                        results.push_back(temp);
 
 
-//            auto new_dist = dist(nodes.at(current_center), nodes.at(j));
+//            auto new_dist = cost(nodes.at(current_center), nodes.at(j));
 ////            cout << " new dist is: " << new_dist << endl;
 ////            cout << " old dist is: " << distance[j] << endl;
 //
