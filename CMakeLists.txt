@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(pubsub)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -O2")
+set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -Wall -O3")
 
 add_executable(
         pubsub
@@ -30,6 +30,6 @@ add_executable(
         algorithms/subscriptionForest/CenteredIntervalTree.h
         algorithms/subscriptionForest/IntervalTree.h
         algorithms/subscriptionForest.h
-        algorithms/ACTree.h
+        algorithms/ACTreeLogVolume.h
         params.h
-        algorithms/SCTreeParallel.h)
+        algorithms/SCTreeParallel.h algorithms/ACTreeNearestCenter.h algorithms/vari-rein.cpp algorithms/vari-siena.h algorithms/vari-siena.cpp)

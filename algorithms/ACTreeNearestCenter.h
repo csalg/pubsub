@@ -1,20 +1,18 @@
-#ifndef PUBSUB_SCTREEPARALLEL_H
-#define PUBSUB_SCTREEPARALLEL_H
+//
+// Created by work on 9/9/19.
+//
 
+#ifndef PUBSUB_ACTREENEARESTCENTER_H
+#define PUBSUB_ACTREENEARESTCENTER_H
 
 #include "../params.h"
+
 
 #include<vector>
 #include <random>
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
-#include <iostream>
-//#include <boost/asio/thread_pool.hpp>
-//#include <boost/asio/post.hpp>
-#include <nlohmann/json.hpp>
-#include "../vendor/ctpl_stl.h"  // or <ctpl_stl.h> if ou do not have Boost library
-
 #include "../common/data_structure.h"
 //#include "./subscriptionForest/AVLTree.h"
 //#include "./subscriptionForest/IntervalNode.h"
@@ -23,23 +21,17 @@
 //std::random_device rd;     // only used once to initialise (seed) engine
 //std::mt19937 rng(rd());    // random-number engine used (Mersenne-Twister in this case)
 
-using json = nlohmann::json;
 
-
-
-namespace sctp {
-//    boost::asio::thread_pool pool(2); // 4 threads
-    ctpl::thread_pool p(2 /* two threads in the pool */);
-
+namespace actnc {
     struct Node;
     struct NodeList;
 
     struct Node {
         NodeList *child = nullptr;
-        int lo[MAX_ATTS] = {0};
-        int hi[MAX_ATTS] = {0};
-        int center[MAX_ATTS] = {0};
-        int width = 0;
+        unsigned int lo[MAX_ATTS] = {0};
+        unsigned int hi[MAX_ATTS];
+        unsigned int center[MAX_ATTS];
+        unsigned int width = 0;
 
         Node() {
             std::fill_n(lo, MAX_ATTS, MAX_CARDINALITY);
@@ -47,6 +39,14 @@ namespace sctp {
 
         Node(IntervalSub &sub) {
 //        cout << "Constructing from sub" << endl;
+            for (auto i =0; i!= MAX_ATTS; ++i){
+                hi[i] = MAX_CARDINALITY;
+            }
+
+            for (auto i =0; i!= MAX_ATTS; ++i){
+                center[i] = MAX_CARDINALITY/2;
+            }
+
             for (auto constraint : sub.constraints) {
 //            cout << constraint.lowValue << endl;
                 lo[constraint.att] = constraint.lowValue;
@@ -88,12 +88,11 @@ namespace sctp {
         void match(const Pub &pub, int &matchSubs);
 
         bool match(IntervalSub &sub);
-
-        void match(const Pub &pub, int j, vector<bool> &matches);
     };
 
     struct NodeList {
         vector<Node> nodes;
+        vector<size_t> nodesWithChildren;
 
         int size() {
             return nodes.size();
@@ -124,45 +123,7 @@ namespace sctp {
             }
         }
 
-        void insert(IntervalSub &sub) {
-            if (nodes.size() <= SPAN_AFTER_CLUSTERING) {
-                push(sub);
-                return;
-            }
-
-            bool found = 0;
-            unsigned short nearest_center = 0;
-            long double distance = INFINITY;
-
-
-            for (auto i = 0; i != size(); i++) {
-                if (nodes.at(i).hasChildren()) {
-                    if (nodes.at(i).match(sub)) {
-                        nodes.at(i).child->insert(sub);
-                        return;
-
-//                        Old code looked at all possible places to fit the thing.
-//                    auto new_distance =cost(nodes.at(i), sub);
-//                    if (new_distance < distance) {
-//                        distance = new_distance;
-//                        nearest_center=i;
-//                        found=1;
-//                    }
-                    }
-                }
-            }
-
-//        if (found){
-//            nodes.at(nearest_center).child->insert(sub);
-//            return;
-//        }
-
-            if (nodes.size() >= MAX_SPAN) {
-                this->cluster();
-            }
-//        cout << nodes.size() << " ";
-            push(sub);
-        }
+        void insert(IntervalSub &sub);
 
         long double dist(Node &a, Node &b) {
             unsigned sum = 0;
@@ -192,26 +153,9 @@ namespace sctp {
 //        for (auto node : nodes){
 //            cout << node.lo[0] << " ";
 //        }
-            std::vector<std::future<void>> results;
-            auto matches = new vector<bool>(nodes.size(),0);
-//            for (auto match : *matches) cout << match;
-//            cout << endl;
 
-//            for (auto node : nodes) node.match(pub, matchSubs);
-            for (auto j = 0; j != nodes.size(); j++)
-                results.push_back(p.push([&, j](int id) { nodes[j].match(pub, j, *matches); }));
-            for (int j = 0; j != results.size(); ++j) {
-                results[j].get();
-            }
-
-
-            for (auto i = 0; i != matches->size(); i++) {
-                if (matches->at(i)) {
-                    matchSubs++;
-                    if (nodes[i].hasChildren()) nodes[i].child->match(pub, matchSubs);
-                }
-            }
-        };
+            for (auto node : nodes) node.match(pub, matchSubs);
+        }
 
         void print() {
             for (auto i = 0; i != nodes.size(); i++) {
@@ -245,24 +189,46 @@ namespace sctp {
 //    cout << "Found match" << endl;
 
         matchSubs++;
-    };
-        void Node::match(const Pub &pub, int j, vector<bool> &matches){
-//    cout << "Matched inside" << endl;
-//    matchSubs++;
+    }
 
-            for (auto pair : pub.pairs) {
-                if (pair.value < lo[pair.att]) {
-                    return;
-                }
+
+    void NodeList::insert(IntervalSub &sub){
+        if (nodes.size() <= SPAN_AFTER_CLUSTERING){
+            push(sub);
+            return;
+        }
+
+        bool found = 0;
+        unsigned short nearest_center = 0;
+        long double distance = INFINITY;
+
+        for (auto j=0; j!= nodesWithChildren.size(); j++){
+            auto i = nodesWithChildren[j];
+            if (nodes.at(i).match(sub)){
+                nodes.at(i).child->insert(sub);
+                return;
+
+//                        Old code looked at all possible places to fit the thing.
+//                    auto new_distance =dist(nodes.at(i), sub);
+//                    if (new_distance < distance) {
+//                        distance = new_distance;
+//                        nearest_center=i;
+//                        found=1;
+//                    }
             }
+        }
 
-            for (auto pair : pub.pairs) {
-                if (pair.value > hi[pair.att]) return;
-            }
+//        if (found){
+//            nodes.at(nearest_center).child->insert(sub);
+//            return;
+//        }
 
-            matches[j] = 1;
-        };
-
+        if (nodes.size() >= MAX_SPAN) {
+            this->cluster();
+        }
+//        cout << nodes.size() << " ";
+        push(sub);
+    }
 
     bool Node::match(IntervalSub &sub) {
 
@@ -356,15 +322,14 @@ namespace sctp {
 //    this->print();
 //    cout << "Clustering" << endl;
 
-//     Sort nodes by logVolume.
-//    sort(nodes.begin(), nodes.end(), [](Node a, Node b) {return a.logVolume < b.logVolume; });
+//     Sort nodes by width.
+        sort(nodes.begin(), nodes.end(), [](Node a, Node b) { return a.width < b.width; });
 //    this->print();
 
-        const unsigned len = this->size();
-//    const unsigned len = this->size() - LEAVE_OUT; // How many nodes are we actually considering?
+        const unsigned len = this->size() - LEAVE_OUT; // How many nodes are we actually considering?
 //    cout << "len: " << len << endl;
         vector<bool> centers(len, 0); // Bitset to mark selected centers.
-        auto distance_and_centers = new pair<long double, size_t>[len];
+        auto distance_and_centers = new pair<long double, unsigned short>[len];
 //    auto nearest_center = new unsigned short[len];
 
         // Set distances to infinity.
@@ -380,31 +345,6 @@ namespace sctp {
         for (auto i = 0; i != len; i++) {
             distance_and_centers[i].second = next_center;
         }
-
-//        auto updateNearestCenter = [=](
-//                pair<long double, unsigned short> *distance_and_centers,
-//                int j,
-//                unsigned &current_center,
-//                unsigned &next_center,
-//                long double &further_distance
-//        ) {
-//            auto new_dist = cost(nodes.at(current_center), nodes.at(j));
-//
-////            cout << " new dist is: " << new_dist << endl;
-////            cout << " old dist is: " << distance[j] << endl;
-//
-//            if (distance_and_centers[j].first > new_dist) {
-//                distance_and_centers[j].first = new_dist;
-//                distance_and_centers[j].second = current_center;
-//            }
-//
-////            std::lock_guard<std::mutex> lock(m);
-//            if (distance_and_centers[j].first > further_distance) {
-////                cout << changing
-//                further_distance = distance_and_centers[j].first;
-//                next_center = j;
-//            }
-//        };
         Timer centersStart;
 
         for (auto i = 1; i != K; i++) {
@@ -412,11 +352,12 @@ namespace sctp {
             unsigned current_center = next_center;
             // calculate distances
 //        cout << "Calculating distance." << endl;
-            std::vector<std::future<void>> results;
+
             for (auto j = 0; j != len; j++) {
 //            for (auto center : centers) cout << center;
 
                 if (!centers[j]) {
+
 //            cout << "K is: " << K;
 //            cout << " i is: " << i;
 //            cout << " current center is: " << next_center;
@@ -425,63 +366,27 @@ namespace sctp {
 //            nodes.at(next_center).print();
 //            cout << "node being calculated: ";
 //            nodes.at(j).print();
-//                boost::asio::post(pool,updateNearestCenter(
-//                        distance_and_centers,
-//                        j,
-//                        current_center,
-//                        next_center,
-//                        further_distance));
-                    results.push_back(p.push([&, j](int id) {
-
-//                    boost::asio::post(pool, [&, j]() {
-//                    cout << j << " " << current_center << " " << nodes.size() <<  endl;
-
-                        auto new_dist = dist(nodes.at(current_center), nodes.at(j));
-
-//            cout << " new cost is: " << new_dist << endl;
-//            cout << " old cost is: " << distance[j] << endl;
-
-                        if (distance_and_centers[j].first > new_dist) {
-                            distance_and_centers[j] = make_pair(new_dist, current_center);
-                        }
-                    }));
-//                        results.push_back(temp);
 
 
-//            auto new_dist = cost(nodes.at(current_center), nodes.at(j));
-////            cout << " new dist is: " << new_dist << endl;
-////            cout << " old dist is: " << distance[j] << endl;
-//
-//
-//            if (distance_and_centers[j].first > new_dist){
-//                distance_and_centers[j].first = new_dist;
-//                distance_and_centers[j].second = current_center;
-//            }
-//
-//            if (distance_and_centers[j].first > further_distance) {
-////                cout << changing
-//                further_distance = distance_and_centers[j].first;
-//                next_center = j;
-//            }
+                    auto new_dist = dist(nodes.at(current_center), nodes.at(j));
+//            cout << " new dist is: " << new_dist << endl;
+//            cout << " old dist is: " << distance[j] << endl;
 
-                }
-            }
+                    if (distance_and_centers[j].first > new_dist) {
+                        distance_and_centers[j].first = new_dist;
+                        distance_and_centers[j].second = current_center;
+                    }
 
-            for (int j = 0; j != results.size(); ++j) {
-                results[j].get();
-            }
-            for (auto j = 0; j != len; j++) {
-                if (distance_and_centers[j].first > further_distance) {
+                    if (distance_and_centers[j].first > further_distance) {
 //                cout << changing
-                    further_distance = distance_and_centers[j].first;
-                    next_center = j;
+                        further_distance = distance_and_centers[j].first;
+                        next_center = j;
+                    }
                 }
             }
-                centers[next_center] = 1;
-//        cout << "Made it here" << endl;
-
+            centers[next_center] = 1;
         }
-//        cout << "Finding centers took " << centersStart.elapsed_nano()/1000000 << "ms." << endl;
+//    cout << "Finding centers took " << centersStart.elapsed_nano()/1000000 << "ms." << endl;
 
 //    cout << "Centers array" << endl;
 //    for (auto center : centers) cout << center;
@@ -502,7 +407,6 @@ namespace sctp {
 //    cout << endl;
 
         Timer memoryT;
-//        cout << "Moving stuff" << endl;
 
         vector<Node> newNodes;
         newNodes.reserve(MAX_SPAN);
@@ -514,6 +418,7 @@ namespace sctp {
 //    cout << "toAssign before" << endl;
 //    for (auto center : toAssign) cout << center;
 //    cout << endl;
+
 
         unsigned short toAssignAfter = 0;
 //    cout << toAssignAfter << endl;
@@ -535,13 +440,21 @@ namespace sctp {
 //    cout << "toAssign after" << endl;
 //    for (auto center : toAssign) cout << center;
 //    cout << endl;
+        nodesWithChildren.clear();
 
         for (auto i = 0; i != nodes.size(); i++) {
             if (toAssign[i]) {
 //            cout << "Assigning " << i << endl;
                 newNodes.push_back(nodes.at(i));
+                if (nodes.at(i).hasChildren()) nodesWithChildren.push_back(newNodes.size() - 1);
+
             }
         }
+
+//    cout << "nodesWithChildren: ";
+//    for (auto parent : nodesWithChildren) cout << parent << " ";
+//    cout << endl;
+
 //    cout << "Here are the new nodes:" << endl;
 //    for (auto node : newNodes) node.print();
 //
@@ -549,7 +462,7 @@ namespace sctp {
         nodes.reserve(MAX_SPAN);
         nodes.insert(nodes.begin(), newNodes.begin(), newNodes.end());
         std::vector<Node>().swap(newNodes);
-//        cout << "Memory operations took " << centersStart.elapsed_nano()/1000000 << "ms." << endl;
+//    cout << "Memory operations took " << centersStart.elapsed_nano()/1000000 << "ms." << endl;
 
 ////        delete newNodes;
 //    cout << "Finished successfully. K was " << K << endl;
@@ -602,14 +515,12 @@ namespace sctp {
     }
 
 
-    class SubscriptionClusterTree : public Broker {
+    class AdaptiveClusterTreeNearestCenter : public Broker {
         std::uniform_int_distribution<unsigned> uni; // guaranteed unbiased
         NodeList *root = new NodeList();
         unsigned leaveOutRate;
-//        boost::asio::thread_pool *pool;
-
     public:
-        SubscriptionClusterTree(unsigned leaveOutRate) : Broker(), leaveOutRate(leaveOutRate) {
+        AdaptiveClusterTreeNearestCenter(unsigned leaveOutRate) : Broker(), leaveOutRate(leaveOutRate) {
         };
 
         void insert(IntervalSub sub) {
@@ -663,6 +574,5 @@ namespace sctp {
         };
 
     };
-}
-
-#endif //PUBSUB_SCTREEPARALLEL_H
+};
+#endif //PUBSUB_ACTREENEARESTCENTER_H

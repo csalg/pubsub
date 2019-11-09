@@ -44,7 +44,12 @@ struct Combo{
 struct IntervalCombo{
     int lowValue, highValue;
     int subID;
+
+    IntervalCombo() = default;
+    IntervalCombo(int lowValue, int highValue, int subID) : lowValue(lowValue), highValue(highValue), subID(subID) {};
 };
+
+
 
 struct Pair{
     int att;

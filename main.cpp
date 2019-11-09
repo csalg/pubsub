@@ -11,9 +11,11 @@
 #include "./algorithms/opIndex.h"
 #include "./algorithms/rein.h"
 #include "./algorithms/siena.h"
+#include "./algorithms/vari-siena.h"
 #include "./algorithms/tama.h"
 #include "./algorithms/subscriptionForest.h"
-#include "algorithms/ACTree.h"
+#include "algorithms/ACTreeLogVolume.h"
+#include "algorithms/ACTreeNearestCenter.h"
 //#include "./algorithms/SCTreeParallel.h"
 
 
@@ -25,6 +27,7 @@ void runAlgos(json j, string outputFileName) {
     vector<unsigned> subsRange = j["number_of_subscriptions"];           // Number of subscriptions.
     int pubs = j["number_of_events"];           // Number of publications.
     vector<unsigned> attsRange = j["number_of_dimensions"];           // Total number of attributes, i.e. dimensions.
+    string
     int consPer = j["percentage_of_subscription_attributes"];           // Percentage of dimensions as constraints(predicates) in one sub.
     int mPer = j["percentage_of_event_attributes"];              // Number of constraints in one pub.
     int valDom = j["cardinality_of_values"];         // Cardinality of values.
@@ -55,24 +58,36 @@ void runAlgos(json j, string outputFileName) {
                         int levels = htreeConfig["levels"];
                         int cells = htreeConfig["cells"];
                         toRun.push_back(make_pair("H-Tree", new Htree(atts, levels, cells, valDis, valDom)));
-                    } else if ((*it).compare("Siena") == 0) {
+                    }
+                    else if ((*it).compare("Siena") == 0) {
                         toRun.push_back(make_pair("Siena", new Siena()));
                     }
+                    else if ((*it).compare("Vari-Siena") == 0) {
+                        toRun.push_back(make_pair("Vari-Siena", new VariSiena()));
+                    }
 //                    else if ((*it).compare("subscriptionBTree") == 0) {
-//                        toRun.push_back(make_pair("subscriptionBTree", new SubscriptionClusterTree(20)));
+//                        toRun.push_back(make_pair("subscriptionBTree", new AdaptiveClusterTreeNearestCenter(20)));
 //                    }
                     else if ((*it).compare("Subscription Forest") == 0)
                     {
                         const unsigned constAtts = atts;
                         toRun.push_back(make_pair("Subscription Forest", new SubscriptionForest(atts, constraints_)));
                     }
-                    else if ((*it).compare("ACTree") == 0)
+                    else if ((*it).compare("ACTreeLogVolume") == 0)
                     {
-                        std::ifstream i("./config/algos/ACTree.json");
+                        std::ifstream i("./config/algos/ACTreeLV.json");
                         json algoConfig;
                         i >> algoConfig;
                         unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
-                        toRun.push_back(make_pair("ACTree", new AdaptiveClusterTree(leaveOutRate, constraints_)));
+                        toRun.push_back(make_pair("ACTreeLogVolume", new actlv::AdaptiveClusterTreeLogVolume(leaveOutRate, constraints_)));
+                    }
+                    else if ((*it).compare("ACTreeNearestCenter") == 0)
+                    {
+                        std::ifstream i("./config/algos/ACTreeNC.json");
+                        json algoConfig;
+                        i >> algoConfig;
+                        unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
+                        toRun.push_back(make_pair("ACTreeNC", new actnc::AdaptiveClusterTreeNearestCenter(leaveOutRate)));
                     }
 //                    else if ((*it).compare("SCTreeParallel") == 0)
 //                    {
@@ -80,11 +95,15 @@ void runAlgos(json j, string outputFileName) {
 //                        json algoConfig;
 //                        i >> algoConfig;
 //                        unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
-//                        toRun.push_back(make_pair("SCTreeParallel", new sctp::SubscriptionClusterTree(leaveOutRate)));
+//                        toRun.push_back(make_pair("SCTreeParallel", new sctp::AdaptiveClusterTreeNearestCenter(leaveOutRate)));
 //                    }
                     else if ((*it).compare("REIN") == 0)
                     {
                         toRun.push_back(make_pair("REIN", new Rein(valDom)));
+                    }
+                    else if ((*it).compare("Vari-REIN") == 0)
+                    {
+                        toRun.push_back(make_pair("Vari-REIN", new VariRein(valDom)));
                     }
                     else if ((*it).compare("OpIndex") == 0) {
                         toRun.push_back(make_pair("OpIndex", new opIndex()));

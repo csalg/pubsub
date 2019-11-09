@@ -157,7 +157,7 @@ int opIndex::getMinFre(Sub x)
 
 int opIndex::getMinFre(IntervalSub x)
 {
-    int tmp = x.constraints.at(0).att;
+f    int tmp = x.constraints.at(0).att;
     for (int i = 1; i < x.size; i++)
         if (fre[x.constraints[i].att] < fre[tmp])
             tmp = x.constraints[i].att;

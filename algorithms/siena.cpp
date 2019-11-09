@@ -4,7 +4,7 @@
 
 void Siena::insert(IntervalSub sub)
 {
-    for (int i = 0; i < sub.size; i++)
+    for (int i = 0; i != sub.size; ++i)
     {
         IntervalCombo combo;
         combo.highValue = sub.constraints[i].highValue;
