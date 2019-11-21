@@ -49,8 +49,10 @@ public:
     double alpha, width;
     intervalGenerator(int subs, int pubs, int atts, int cons, int m, int attDis, int valDis, int valDom, double alpha, double width = 0.5):
             subs(subs),pubs(pubs),atts(atts),cons(cons),m(m),attDis(attDis),valDis(valDis),valDom(valDom),alpha(alpha),width(width){}
+    intervalGenerator(){}
     void GenSubList();
     void GenPubList();
+    vector<bool> GenZipfAtts(int maxAtts, double alpha, int atts);
 };
 
 #endif //PUBSUB_GENERATOR_H

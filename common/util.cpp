@@ -1,4 +1,5 @@
 #include "util.h"
+#include "../params.h"
 using namespace std;
 
 ofstream fileStream;
@@ -654,6 +655,9 @@ vector<int> Util::SortAtt(int fre[], int atts)
     return result;
 }
 
-
-
+int Util::safeValue(int num){
+    if (num > MAX_CARDINALITY) return MAX_CARDINALITY;
+    if (num < 0) return 0;
+    return num;
+}
 

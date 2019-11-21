@@ -11,6 +11,7 @@ add_executable(
         common/generator.cpp
         common/data_structure.h
         common/chrono_time.h
+        common/csv_parser.hpp
         common/printer.h
         common/util.h
         common/util.cpp

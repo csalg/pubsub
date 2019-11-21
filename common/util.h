@@ -77,6 +77,7 @@ public:
 
     static vector<int> SortAtt (int fre[], int atts);
 
+    static int safeValue(int num);
 };
 
 #endif //PUBSUB_UTIL_H

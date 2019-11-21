@@ -190,6 +190,31 @@ void intervalGenerator::GenZipfAtts(IntervalSub &sub, int atts, double alpha)
     }
 }
 
+vector<bool> intervalGenerator::GenZipfAtts(int maxAtts, double alpha, int atts)
+/*
+ * Returns a vector of attributes picked from a Zipf distribution with parameter alpha.
+ */
+{
+    if (maxAtts < atts) {
+        perror("Error generating attributes from the Zipf distribution: maxAtts must be greater than or equal to atts.");
+    }
+    vector<int> a;
+    for (int i = 0; i < atts; i++)
+    {
+        int x = zipfDistribution(maxAtts, alpha);
+        while (CheckExist(a,x))
+            x = zipfDistribution(maxAtts, alpha);
+        a.push_back(x);
+    }
+    vector<bool> selectedAttributes;
+    for (auto i =0; i != maxAtts; ++i){ selectedAttributes.push_back(0);}
+    for (auto attribute : a) { selectedAttributes[attribute] = 1;}
+
+    return selectedAttributes;
+}
+
+
+
 void generator::GenZipfAtts(Pub &pub, int atts, double alpha)
 {
     vector<int> a;
