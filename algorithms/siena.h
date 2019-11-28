@@ -17,13 +17,16 @@ using namespace std;
 
 
 class Siena : public Broker {
-    int counter[MAX_SUBS];
-    vector<IntervalCombo> data[MAX_ATTS];
+    int                     counter[MAX_SUBS];
+    vector<IntervalCombo>   data[MAX_ATTS];
 public:
-    Siena() : Broker () {}
-    void insert(IntervalSub sub);
-    void match(const Pub &pub, int &matchSubs, const vector<IntervalSub> &subList);
+    Siena() : Broker () {
+//        for(auto i=0; i!=MAX_ATTS; ++i) data[i].reserve(MAX_SUBS);
+    }
+    void insert(IntervalSub sub) override;
+    void match(const Pub &pub, int &matchSubs, const vector<IntervalSub> &subList) override;
 
+    void print();
 };
 
 #endif //PUBSUB_SIENA_H

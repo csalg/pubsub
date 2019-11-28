@@ -20,8 +20,8 @@
 #ifndef PUBSUB_PARAMS_H
 #define PUBSUB_PARAMS_H
 
-static const unsigned       MAX_SUBS = 1000000;
-static const unsigned short MAX_ATTS = 16;
+static const unsigned       MAX_SUBS = 12000000;
+static const unsigned short MAX_ATTS = 20;
 
 static const unsigned short MAX_BUCKS = 1000;
 

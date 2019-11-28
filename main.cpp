@@ -35,7 +35,7 @@ void evaluate(
         int atts,            // Number of attributes in total.
         int constraints_,     // Number of constraints(predicates) in one sub.
         int m,               // Number of values in one pub.
-        int width,           // Interval width
+        double width,           // Interval width
         int alpha,           // Zipf distribution parameter
         double distance_from_mean,           // Interval width
         int valDom,
@@ -44,80 +44,85 @@ void evaluate(
         const vector<Pub> &events,
         const vector<IntervalSub> &subscriptions,
         string outputFileName
-        ) {
-    /* This is the function that actually constructs and evaluates the algorithms.
-     * Side-effects: it writes a csv with the results.
-     * */
+) {
+    // This is the function that actually constructs and evaluates the algorithms and writes to csv with the results.
 
+    Broker* willRun;
+    struct AlgorithmRunnable {
+        Broker*     algo;
+        string      name;
+        double      param;
+        AlgorithmRunnable(string name, Broker * algo, double param): algo(algo), name(name), param(param){};
+    };
+    vector<AlgorithmRunnable> toRun; // This is a workaround for dynamic allocation, casting to Broker means that it inherits the superclass' methods
 
-    vector<pair<string, Broker *>> toRun; // This is a workaround for dynamic allocation, casting to Broker means that it inherits the superclass' methods
-
-    for (std::vector<string>::iterator it = algos.begin(); it != algos.end(); ++it) {
-        if ((*it).compare("H-Tree") == 0) {
+    for (auto & algo : algos) {
+        cout<< algo <<endl;
+        if (algo == "H-Tree") {
             std::ifstream i("./config/algos/htree.json");
             json htreeConfig;
             i >> htreeConfig;
             int levels = htreeConfig["levels"];
             int cells = htreeConfig["cells"];
-            toRun.push_back(make_pair("H-Tree", new Htree(atts, levels, cells, valDis, valDom)));
+            toRun.emplace_back("H-Tree", new Htree(atts, levels, cells, valDis, valDom), 0);
         }
-        else if ((*it).compare("Siena") == 0) {
-            toRun.push_back(make_pair("Siena", new Siena()));
-        }
-        else if ((*it).compare("Vari-Siena") == 0) {
-            toRun.push_back(make_pair("Vari-Siena", new VariSiena()));
-        }
-        else if ((*it).compare("ACTree") == 0)
+//        else if (algo == "Siena")
+//            toRun.emplace_back("Siena", new Siena());
+//        else if (algo == "Vari-Siena")
+//            toRun.emplace_back("Vari-Siena", new VariSiena());
+        else if (algo == "ACTree")
         {
             std::ifstream i("./config/algos/ACTree.json");
             json algoConfig;
             i >> algoConfig;
-            unsigned leaveOutRate = algoConfig["LEAVE_OUT"];
-            short levels = algoConfig["LEVELS"];
-            toRun.push_back(make_pair("ACTree", new SubscriptionClusterTree(leaveOutRate, levels)));
+            vector<unsigned short>  maxSpans        = algoConfig["MAX_SPAN"];
+            unsigned short          leaveOutRate    = algoConfig["LEAVE_OUT"];
+            unsigned short          levels          = algoConfig["LEVELS"];
+            for (auto maxSpan= maxSpans[0]; maxSpan <= maxSpans[1]; maxSpan += maxSpans[2])
+                toRun.emplace_back("ACTree", new SubscriptionClusterTree(leaveOutRate, levels, maxSpan), maxSpan);
         }
-        else if ((*it).compare("REIN") == 0)
-        {
-            toRun.push_back(make_pair("REIN", new Rein(valDom)));
-        }
-        else if ((*it).compare("OpIndex") == 0) {
-            toRun.push_back(make_pair("OpIndex", new opIndex()));
-        }
-        else if ((*it).compare("TAMA") == 0)
+        else if (algo == "REIN")
+            toRun.emplace_back("REIN", new Rein(MAX_CARDINALITY), 0);
+        else if (algo == "OpIndex")
+            toRun.emplace_back("OpIndex", new opIndex(), 0);
+        else if (algo == "TAMA")
         {
             std::ifstream i("./config/algos/tama.json");
             json tamaConfig;
             i >> tamaConfig;
             int levels = tamaConfig["levels"];
-            toRun.push_back(make_pair("TAMA", new Tama(atts, valDom, levels)));
+            toRun.emplace_back("TAMA", new Tama(atts, valDom, levels), 0);
         }
 
 
         while (!toRun.empty()) {
-            cout << (toRun.at(0)).first << endl;
+            cout << (toRun.back()).name << endl;
 
             vector<double> insertTimeList;
             vector<double> matchTimeList;
             vector<double> matchSubList;
 
             // Insert operation
-            for (int i = 0; i < subscriptions.size(); i++) {
+            auto i = 1;
+            for (const auto & subscription : subscriptions) {
+//                cout << "Sub " <<q i << endl;
+                ++i;
                 Timer subStart;
 
-                (*((toRun.at(0)).second)).insert(
-                        subscriptions.at(i));                       // Insert sub[i] into data structure.
+                toRun.back().algo->insert(subscription);   // Insert sub[i] into data structure.
 
                 int64_t insertTime = subStart.elapsed_nano();   // Record inserting time in nanoseconds
                 insertTimeList.push_back((double) insertTime / 1000000);
             }
 
 
+
             // Stabbing query
-            for (int i = 0; i < events.size(); i++) {
+            for (int i = 0; i < 1; i++) {
                 int matchSubs = 0;                              // Record the number of matched subscriptions.
                 Timer matchStart;
 
-                (*((toRun.at(0)).second)).match(events.at(i), matchSubs, subscriptions);
+                toRun.back().algo->match(events.at(i), matchSubs, subscriptions);
 
                 int64_t eventTime = matchStart.elapsed_nano();  // Record matching time in nanosecond.
                 matchTimeList.push_back((double) eventTime / 1000000);
@@ -128,14 +133,15 @@ void evaluate(
             // Write output
             cout.precision(3);
             string content =
-                    (toRun.back()).first + "," +
+                    toRun.back().name + "," +
+                    Util::Double2String(toRun.back().param) + "," +
                     Util::Int2String(subscriptions.size()) + "," +
                     Util::Int2String(atts) + "," +
                     Util::Int2String(constraints_) + "," +
-                    std::to_string(alpha) + "," +
+                    Util::Double2String(alpha) + "," +
                     Util::Int2String(m) + "," +
-                    std::to_string(width) + "," +
-                    std::to_string(distance_from_mean) + "," +
+                    Util::Double2String(width) + "," +
+                    Util::Double2String(distance_from_mean) + "," +
                     Util::Double2String(Util::mean(insertTimeList)) + "," +
                     Util::Double2String(Util::mean(matchTimeList)) + "," +
                     Util::Double2String(Util::mean(matchSubList));
@@ -145,10 +151,84 @@ void evaluate(
 //                                        Util::Double2String(Util::mean(matchTimeList)) + "," +
 //                                        Util::Double2String(Util::mean(matchSubList)) << endl;
 
-            toRun.erase(toRun.begin());
+            toRun.erase(toRun.end());
         }
     }
 }
+
+//
+//void evaluate(
+//        int atts,            // Number of attributes in total.
+//        int constraints_,     // Number of constraints(predicates) in one sub.
+//        int m,               // Number of values in one pub.
+//        int width,           // Interval width
+//        int alpha,           // Zipf distribution parameter
+//        double distance_from_mean,           // Interval width
+//        int valDom,
+//        int valDis,
+//        vector<string> &algos,
+//        const vector<Pub> &events,
+//        const vector<IntervalSub> &subscriptions,
+//        string outputFileName
+//) {
+//    // This is the function that actually constructs and evaluates the algorithms and writes to csv with the results.
+//
+//    SubscriptionClusterTree willRun(0, 3, 20 );
+//    string name = "ACTree";
+//    string algoParam;
+//
+//    vector<double> insertTimeList;
+//    vector<double> matchTimeList;
+//    vector<double> matchSubList;
+//
+//    // Insert operation
+//    for (const auto &subscription : subscriptions) {
+//        Timer subStart;
+//
+//        willRun.insert(subscription);                       // Insert sub[i] into data structure.
+//
+//        int64_t insertTime = subStart.elapsed_nano();   // Record inserting time in nanoseconds
+//        insertTimeList.push_back((double) insertTime / 1000000);
+//    }
+//
+////    willRun.print();
+////    assert(false);
+////
+//
+//    // Stabbing query
+//    for (int i = 0; i < events.size(); i++) {
+//        int matchSubs = 0;                              // Record the number of matched subscriptions.
+//        Timer matchStart;
+//
+//        willRun.match(events.at(i), matchSubs, subscriptions);
+//
+//        int64_t eventTime = matchStart.elapsed_nano();  // Record matching time in nanosecond.
+//        matchTimeList.push_back((double) eventTime / 1000000);
+//        matchSubList.push_back(matchSubs);
+////                cout << "Matched: " << matchSubs << endl;
+//    }
+//
+//    // Write output
+//    cout.precision(3);
+//    string content =
+//            name + "," +
+//            Util::Int2String(subscriptions.size()) + "," +
+//            Util::Int2String(atts) + "," +
+//            Util::Int2String(constraints_) + "," +
+//            std::to_string(alpha) + "," +
+//            Util::Int2String(m) + "," +
+//            std::to_string(width) + "," +
+//            std::to_string(distance_from_mean) + "," +
+//            Util::Double2String(Util::mean(insertTimeList)) + "," +
+//            Util::Double2String(Util::mean(matchTimeList)) + "," +
+//            Util::Double2String(Util::mean(matchSubList));
+//    Util::WriteData(outputFileName.c_str(), content);
+//    cout << content << endl;
+////            cout <<                     Util::Double2String(Util::mean(insertTimeList)) + "," +
+////                                        Util::Double2String(Util::mean(matchTimeList)) + "," +
+////                                        Util::Double2String(Util::mean(matchSubList)) << endl;
+//
+//}
 
 void evaluateUsingSyntheticData(json j, string outputFileName) {
     /* As the name implies, this function will read the json file parameters,
@@ -175,9 +255,8 @@ void evaluateUsingSyntheticData(json j, string outputFileName) {
         for (unsigned subs = subsRange.at(0); subs <= subsRange.at(1); subs += subsRange.at(2)) {
             for (unsigned atts = attsRange.at(0); atts <= attsRange.at(1); atts += attsRange.at(2)) {
 
-                unsigned constraints_ =
-                        (atts * consPer) / 100;           // Number of constraints(predicates) in one sub.
-                unsigned m = (atts * mPer) / 100;              // Number of constraints in one pub.
+                unsigned constraints_ = (atts * consPer) / 100; // Number of constraints(predicates) in one sub.
+                unsigned m = (atts * mPer) / 100;               // Number of constraints in one pub.
 
                 cout << "Dimensions: " << atts << ", Width: " << width << ", Constraints: " << constraints_
                      << ", Subscriptions: " << subs << endl;
@@ -323,7 +402,6 @@ void evaluateUsingDataAugmentation(json j, string augmentedDataDirectory_, strin
             aria::csv::CsvParser parser = aria::csv::CsvParser(f).delimiter(' ');
 
             int id = 1;
-            vector<double> constraintsAmount;
             for (auto &row : parser) {
                 int attribute = 0;
                 vector<bool> zipfAttributes = gen.GenZipfAtts(maxAtts,alpha,number_of_constraints);
@@ -343,7 +421,6 @@ void evaluateUsingDataAugmentation(json j, string augmentedDataDirectory_, strin
                     }
                     ++attribute;
                 }
-                constraintsAmount.push_back(attribute - 1);
                 subscriptions.push_back(sub);
                 ++id;
             }
@@ -358,6 +435,9 @@ void evaluateUsingDataAugmentation(json j, string augmentedDataDirectory_, strin
 
             const vector<Pub> &const_events = events;
             const vector<IntervalSub> &const_subscriptions = subscriptions;
+            vector<double> constraintsAmount;
+
+            for (auto sub : subscriptions) constraintsAmount.push_back(sub.size);
 
             evaluate(Util::mean(events_attributes),            // Number of attributes in total.
                      Util::mean(constraintsAmount),           // Number of constraints(predicates) in one sub.
@@ -404,7 +484,7 @@ int main(int argc, char **argv) {
     dst.close();
 
     // Prep csv
-    string header = "Algorithm,Subscriptions,Dimensions,Subscription constraints, Alpha, Event pairs,Width,Distance from mean,Mean insert subscription time,Mean event match time,Mean number of matched subscriptions";
+    string header = "Algorithm,Algorithm parameter,Subscriptions,Dimensions,Subscription constraints, Alpha, Event pairs,Width,Distance from mean,Mean insert subscription time,Mean event match time,Mean number of matched subscriptions";
     Util::WriteData(outputFileName.c_str(), header);
 
     if (mode.compare("synthetic") == 0){
