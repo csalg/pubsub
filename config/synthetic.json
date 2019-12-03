@@ -1,0 +1,18 @@
+{
+  "mode": "synthetic",
+  "params": {
+	"algos" : ["_Subscription Forest", "_ACTreeLogVolume", "_ACTree", "_SCTreeParallel", "TAMA", "REIN", "_Vari-REIN", "_OpIndex", "Vari-Siena", "_Siena", "_OpIndex"],
+	"number_of_subscriptions": [100000, 100000, 10000],
+	"number_of_events": 1,
+	"number_of_dimensions": [16,16,1],
+	"calculate_constraints_method": "simple",
+	"event_pairs": 100,
+	"subscription_constraints": 25,
+	"attribute_distribution": 0,
+	"value_distribution": 0,
+	"cardinality_of_values": 100000,
+	"alpha": 0,
+	"width": [0.1,1,1],
+	"comments": ""
+  }
+}

@@ -288,14 +288,14 @@ void evaluateUsingSyntheticData(json j, string outputFileName) {
     }
 }
 
-void evaluateUsingDataAugmentation(json j, string augmentedDataDirectory_, string outputFileName){
+void evaluateUsingDataAugmentation(json j, string outputFileName){
     /* As the name implies, this function will read the generated CSV, and
      * generate subscriptions and events by adding and subtracting the std. deviation
      * from the given values according to the parameters.
      * Then it passes this to the evaluator.
     */
 
-    static string augmentedDataDirectory = augmentedDataDirectory_; // This is necessary so that it can be used in a struct later
+    static string augmentedDataDirectory = j["params"]["output_data"]; // This is necessary so that it can be used in a struct later
 
 //    vector<double> widths = j["width"];                               // Width of a predicate.
 //    int number_of_constraints = j["number_of_constraints"];
@@ -457,26 +457,30 @@ void evaluateUsingDataAugmentation(json j, string augmentedDataDirectory_, strin
 }
 
 int main(int argc, char **argv) {
-    json modeConfig, config;
-    {
-        std::ifstream i("./config/config.json");
-        i >> modeConfig;
-    }
-    string mode = modeConfig["mode"];
 
-    if (mode.compare("synthetic") != 0 && mode.compare("augmentation") != 0) {
-        cout << "Mode must be 'synthetic' or 'augmentation', but got: '" << mode << "'." << endl;
-        std::perror("No such mode. Exiting.");
+    if (argc != 2){
+        perror(" Please supply a single argument with the location of your configuration file!");
         return 1;
     }
 
-    std::time_t timestamp = std::time(nullptr);
-    string outputFileName = "./output/" + std::to_string(timestamp) + ".csv";
-    string configCopyFileName = "./output/" + std::to_string(timestamp) + ".json";
+    json config;
+
+    std::ifstream i(argv[1]);
+    i >> config;
+
+    string mode = config["mode"];
+
+    if (mode != "synthetic" && mode != "augmentation") {
+        cout << "Mode must be 'synthetic' or 'augmentation', but got: '" << mode << "'." << endl;
+        perror("No such mode. Exiting.");
+        return 1;
+    }
+
+    std::time_t timestamp           = std::time(nullptr);
+    string      outputFileName      = "./output/" + std::to_string(timestamp) + ".csv";
+    string      configCopyFileName  = "./output/" + std::to_string(timestamp) + ".json";
 
     // Copy config.
-    std::ifstream i("./config/"+mode+".json");
-    i >> config;
     std::ofstream  dst(configCopyFileName, std::ios::binary);
     i.clear();
     i.seekg(0);
@@ -487,10 +491,10 @@ int main(int argc, char **argv) {
     string header = "Algorithm,Algorithm parameter,Subscriptions,Dimensions,Subscription constraints, Alpha, Event pairs,Width,Distance from mean,Mean insert subscription time,Mean event match time,Mean number of matched subscriptions";
     Util::WriteData(outputFileName.c_str(), header);
 
-    if (mode.compare("synthetic") == 0){
+    if (mode == "synthetic"){
         evaluateUsingSyntheticData(config, outputFileName);
-    } else if (mode.compare("augmentation") == 0){
-        evaluateUsingDataAugmentation(config, "data/augmented/", outputFileName);
+    } else if (mode == "augmentation"){
+        evaluateUsingDataAugmentation(config,  outputFileName);
     }
 
     return 0;

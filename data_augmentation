@@ -1,0 +1,116 @@
+#! /bin/Rscript
+
+library(ggplot2)
+library(data.table)
+library(dplyr)
+library(condMVNorm) # Conditional normal
+library(VGAM)       # Zipf distribution
+library(configr)    # Read json
+library(RJSONIO)    # Write json
+
+
+setwd('/home/work/cpp/pubsub/cmake-build-debug/')
+unlink('./data/augmented', recursive=TRUE)
+
+
+main <- function() {
+  
+  print("Reading config file")
+  
+  config_file <- read.config(file = "config/augmentation.json")
+  
+  NUMBER_OF_SUBSCRIPTIONS = seq(  from= config_file$number_of_subscriptions[1]
+                                , to  = config_file$number_of_subscriptions[2]
+                                , by  = config_file$number_of_subscriptions[3]
+                                )
+  WIDTH                   = seq(  from= config_file$width[1]
+                                , to  = config_file$width[2]
+                                , by  = config_file$width[3]
+                                )
+                                
+  DISTANCE_FROM_MEAN      = seq(  from= config_file$distance_from_mean[1]
+                                , to  = config_file$distance_from_mean[2]
+                                , by  = config_file$distance_from_mean[3]
+                                )
+                                
+  NUMBER_OF_CONSTRAINTS   = seq(  from= config_file$number_of_constraints[1]
+                                , to  = config_file$number_of_constraints[2]
+                                , by  = config_file$number_of_constraints[3]
+                                )
+                                
+  ALPHA                   = seq(  from= config_file$alpha[1]
+                                , to  = config_file$alpha[2]
+                                , by  = config_file$alpha[3]
+                                )
+                          
+                                
+  
+  
+  if (!file.exists(config_file$input_data)){
+    print("Raw data directory does not exist! Exiting")
+    return
+  }
+  
+  if (!file.exists(config_file$output_data)){
+    dir.create(config_file$output_data)
+  } 
+  
+  if (!file.exists(paste(config_file$output_data, "/", "subscriptions", sep=""))){
+    dir.create(paste(config_file$output_data, "/", "subscriptions", sep=""))
+  } 
+  
+  
+  print("Checking data folder for raw data")
+  raw_data_folder   <- list.files(path=config_file$input_data, pattern="*.csv")
+  raw_data_filename <- paste(config_file$input_data,"/",raw_data_folder[1], sep="")
+  df                <- fread(raw_data_filename, header=TRUE, stringsAsFactors=FALSE)
+  
+  df <- nafill(df, "locf") %>% unlist() %>% matrix(ncol=ncol(df),byrow = FALSE)
+  
+  print("Successfully imported")
+  print("Calculating mean vector and covariance matrix")
+  mu <- colMeans(df)
+  covariance <- cov(df)
+  
+  print("Generating events")
+  rmvnorm(n=config_file$number_of_events, mean=mu, sigma=covariance) %>%
+    write.table(paste(config_file$output_data,"/",config_file$events_filename, sep=""), row.names=FALSE, col.names=FALSE)
+  
+  print("Generating subscriptions")
+  for (n in NUMBER_OF_SUBSCRIPTIONS) {
+    for (width in WIDTH) {
+      for (distance_from_mean in DISTANCE_FROM_MEAN) {
+        for (number_of_constraints in NUMBER_OF_CONSTRAINTS) {
+        for (alpha in ALPHA) {
+          print(paste("n=", n, ", width=", width, "number of constraints=", number_of_constraints, ", alpha=", alpha))
+          
+          timestamp <- format(Sys.time(), "%s")
+          
+          list(  number_of_subscriptions = n, 
+                        width                   = width,
+                        distance_from_mean      = distance_from_mean,
+                        number_of_constraints   = number_of_constraints,
+                        maxAtts                 = length(mu),
+                        alpha                   = alpha
+                        ) %>%
+                toJSON() %>%
+                write(paste(config_file$output_data,"/","subscriptions","/",timestamp,".json", sep=""))
+                
+          if (config_file$distance_from_mean == 0) {
+            rmvnorm(n=n, mean=mu, sigma=covariance) %>%
+              write.table(paste(config_file$output_data,"/","subscriptions","/",timestamp,".csv", sep=""), row.names=FALSE, col.names =  FALSE)
+          }
+        }
+      }
+    }
+  }
+    }
+  
+  print("Exporting standard deviations")
+  write.table(apply(df, 2, sd), paste(config_file$output_data,"/standard_deviations.csv", sep=""), row.names = FALSE, col.names = FALSE)
+  
+  
+  print("Done")
+}
+
+main()

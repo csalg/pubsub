@@ -1,0 +1,39 @@
+#########################################################################################################
+#                                               PUBSUB PLAYBOOK                                         #
+#########################################################################################################
+# This pubsub framework uses yaml file to standardise the whole workflow from testing to displaying     #
+# results in a Jupyter notebook. It is inspired by Ansible playbooks.                                   #
+#########################################################################################################
+
+# This algorithms parameter is a list of algorithms to run throughout all the experiments and is optional
+# If not provided, all algorithms will run.
+algorithms:
+  - TAMA
+  - REIN
+  - ACForest
+
+# The most important part of any pubsub playbook is the datasets section.
+# Since generating millions of subscriptions is computationally expensive, this is the natural way to
+# organize the playbook's tasks. Experiments are specified inside each dataset and run once it is generated.
+datasets:
+  - mode: augmentation # Or synthetic
+    comments: "This is simply 1M subscriptions taken from the event distribution without conditioning."
+    generation_parameters: # These are different for synthetic data
+        directory: "weather"  # Each directory can contain multiple csv files, however they must be of the same dimensions.
+        number_of_subscriptions: 1000000
+        number_of_events: 1000
+        distance_from_mean: 0
+    experiments:
+        - title: "Effect of varying width"
+          comments: "In this experiment we consider the effect of varying the width on the matching performance."
+          parameters:
+            width: # A varying parameter is written as a dictionary of values with the keys 'start', 'stop' and 'step'
+              start: 0.1
+              stop: 1.0
+              step: 0.1
+            constraints: 5 # A fixed parameter is simply a value.
+          plots:
+            - x: "Width"
+              y: "Mean event match time"
+            - x: "Width"
+              y: "Mean insert time"

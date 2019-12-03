@@ -15,7 +15,7 @@ colors = {
 			, 'rein':'magenta'
 			, "siena": "green"
 			, "Siena": "green"
-			, "SCTree":"blue"
+			, "ACTree":"blue"
 			, "subscriptionBTree":"blue"
 		}
 
