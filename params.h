@@ -20,8 +20,8 @@
 #ifndef PUBSUB_PARAMS_H
 #define PUBSUB_PARAMS_H
 
-static const unsigned       MAX_SUBS = 12000000;
-static const unsigned short MAX_ATTS = 20;
+static const unsigned       MAX_SUBS = 1000000;
+static const unsigned short MAX_ATTS = 80;
 
 static const unsigned short MAX_BUCKS = 1000;
 
@@ -29,7 +29,7 @@ static const unsigned short SEGMENTS = 16;
 static const unsigned short MAX_SIGNATURE = 61;
 
 static const unsigned short MAX_SPAN = 100;
-static unsigned             MAX_CARDINALITY = 100000;
+static unsigned             MAX_CARDINALITY = 1000000000;
 static unsigned short       SPAN_AFTER_CLUSTERING= 50;
 static unsigned short       K= 25;
 static unsigned short       LEAVE_OUT= 1;

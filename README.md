@@ -7,14 +7,19 @@
 
 ## About
 
-This started as a fork of [xizeroplus/matching-algorithms](https://github.com/xizeroplus/matching-algorithm) but is now a very different codebase with lots of additional capabilities and algorithms. Like the original project, it is a content-based publish-subscribe algorithms framework aimed at researchers or anyone interested in this area. It might also be suitable as a starting point for a library for a production system; right now, it is simply intended to compare the speed of different algorithms under different load conditions. It is my hope that this version is easier to maintain and extend, and enables researchers spend more time designing and implementing content-based publish-subscribe algorithms and less time writing boilerplate to test their code.
+This project aims to assist researchers in developing and testing some of the best-known content-based publish-subscribe algorithms, such as TAMA, Siena, REIN, OpIndex, H-Tree or ACForest (the latter being the reason why I took the trouble to develop this project).
+
+Once the installation is completed, one can do two things with this project. Firstly, it can be used to confirm the veracity of some claimed results in a paper. To do this, simply create a configuration file with whatever parameters the authors use and run. The result will be LATEX markup and a pdf file. The most common experiments and plots are supported. Secondly, it can be used as a starting point to develop other CPS algorithms. If you have a good idea for an algorithm, you may clone this codebase and extend the algorithms by creating a new class under 'algorithms' and inheriting from the 'Broker' superclass.
+
+The actual algorithms engine is written in C++ and partly inherited from [xizeroplus/matching-algorithms](https://github.com/xizeroplus/matching-algorithm), although extensively rewritten. The data-augmentation procedure uses R to leverage its extensive statistical libraries, and then Python is used to glue everything together and automate the workflow.
+
+Several datasets are included with the project which can be used to model real-world scenarios in the manner described in the ACForest paper. The original synthetic data generators are also included.
 
 ## Design goals
 
-- **DRY code**. A lot of code in the original branch was repeated with slight modifications, making it difficult to maintain and extend.
+- **Standarization** The whole workflow is automated, and everything is specified in configuration files, in a manner similar to Docker or Ansible.
 - **JSON config files** A simple, declarative way to interact with the program. 
 - **CSV output** This can be then used by Matlab, Python or some other high-level language to analyse / visualize performance data.
-- **Parallelism** In the future, I wish to develop algorithms with a high degree of parallelism so that they can actually be used in production systems.
 
 ## Build
 
@@ -46,6 +51,8 @@ Some notes on the ./config/config.json file:
  - **number_of_subscriptions** and **number_of_dimensions** are also lists of the form (start, end, step). These are passed directly to the for-loops in the main program. For example, *"number_of_subscriptions": [1000, 10000, 10000]*, will test subscriptions from 1,000 to 10,000 in steps of 1,000. Setting up lots of ranges will result in lots of experiments and lots of data, so in practice it is best to only write one range per run. For example: *"number_of_subscriptions": [1000, 10000, 10000]* and 	*"number_of_dimensions": [20,20,10]*, will only test 10 loops for the varying amount of subscriptions while keeping the dimensions fixed at $d=20$.
 
 Additionally, some of the algorithms might require some parameters to work, such as number of levels and cells in the case of H-Tree (these are parameters which don't need to be set before compilation). These can be set modifying the files in *./config/algos/*
+
+#### Extending
 
 #### Visualization
 

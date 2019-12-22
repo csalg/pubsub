@@ -63,6 +63,8 @@ struct Node {
 
     bool match(const Pub &pub);
     bool match(IntervalSub &sub);
+
+    bool match(const vector<int> &pub);
 };
 
 struct NodeList {
@@ -162,7 +164,7 @@ struct NodeList {
         return sqrt(sum);
     }
 
-    void match(const Pub &pub, int &matchSubs) {
+    void match(vector<int> pub, int &matchSubs) {
         // A modified BFS
 //        cout << nodes.size() << endl;
 //        for (auto node : nodes){
@@ -205,9 +207,9 @@ struct NodeList {
     void cluster(unsigned short maxSpan, unsigned short spanAfterClustering, unsigned short k, unsigned short leaveOutRate);
 };
 
-bool Node::match(const Pub &pub) {
-    for (auto i=0; i != lo.size(); ++i) if (pub.pairs[i].value < lo[i]) return 0;
-    for (auto i=0; i != hi.size(); ++i) if (pub.pairs[i].value > hi[i]) return 0;
+bool Node::match(const vector<int> &pub) {
+    for (auto i=0; i != lo.size(); ++i) if (pub[i] < lo[i]) return 0;
+    for (auto i=0; i != hi.size(); ++i) if (pub[i] > hi[i]) return 0;
     return 1;
 }
 
@@ -680,7 +682,6 @@ public:
          * Then convert the attributes so that only the relevant pairs are matched.
          */
 //        matchTest();
-//        print();
 
         Pub sortedPub = pub;
         sort(sortedPub.pairs.begin(), sortedPub.pairs.end(), [](Pair a, Pair b) {return a.att < b.att; });
@@ -713,39 +714,42 @@ public:
 //                cout << "Attributes matched: " << attributesBitset.to_string() << endl;
             }
         }
+        vector<vector<int>> pseudoEvents;
+        pseudoEvents.reserve(signatures.size());
 
         for (auto i = 0; i < signatures.size(); ++i) {
             // This loop creates a pseudo-event to match using the tree by discarding all pairs which are not in the
             // tree's subscriptions. It then matches the pseudo-event.
 
-//            for (auto root : roots){
-//                root.print();
-//            }
-//            cout << "Stored subscriptions:" << count() << endl;
+//            if (matchedAttributes[i]) {
 
-            if (matchedAttributes[i]) {
-
-                Pub             pseudoEvent;
-                pseudoEvent.size = 0;
-                unsigned long   maskedEvent = maskedEvents[i];  // This will get right-shifted
-                int             j = 0, z = 0;                   // The current attribute we are looping on inside
-                                                                // the masked event and inside the received event.
-                while (maskedEvent && (z < sortedPub.pairs.size())){
-                    if (maskedEvent & 1){
-                        while(j > sortedPub.pairs[z].att && (z < sortedPub.pairs.size())){
-                            ++z;
-                        }
-                        pseudoEvent.pairs.push_back(sortedPub.pairs[z]);
-                        ++pseudoEvent.size;
+            vector<int> pseudoEvent;
+            unsigned long maskedEvent = maskedEvents[i];  // This will get right-shifted
+            int j = 0, z = 0;   // The current attribute we are looping on inside
+                                // the masked event and inside the received event.
+            while (maskedEvent && (z < sortedPub.pairs.size())) {
+                if (maskedEvent & 1) {
+                    while (j > sortedPub.pairs[z].att && (z < sortedPub.pairs.size())) {
+                        ++z;
                     }
-                    ++j;
-                    maskedEvent >>= 1;
+                    pseudoEvent.push_back(sortedPub.pairs[z].value);
                 }
-                Pub const& const_pseudoEvent = pseudoEvent;
-//                cout << "Size of pseudo-event is: " << pseudoEvent.size << endl;
-                roots[i].match(const_pseudoEvent, matchSubs);
+                ++j;
+                maskedEvent >>= 1;
             }
-            }
+            pseudoEvents.push_back(pseudoEvent);
+        }
+
+        for (auto i = 0; i != pseudoEvents.size(); ++i) {
+//            cout << "This thing doesn't run" << endl;
+//            Pub const& const_pseudoEvent = pseudoEvents.at(i);
+//            for (auto pair : const_pseudoEvent.pairs) cout << pair.att << ": " << pair.value << ", ";
+//            cout << endl;
+            roots[i].match(pseudoEvents.at(i), matchSubs);
+        }
+
+
+
 //        cout << "Matched: " << matchSubs << endl;
 //        cout << "Subscriptions stored: " << count() << endl;
 //        print();

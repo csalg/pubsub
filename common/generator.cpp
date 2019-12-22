@@ -203,7 +203,8 @@ vector<bool> intervalGenerator::GenZipfAtts(int maxAtts, double alpha, int atts)
     {
         int x = zipfDistribution(maxAtts, alpha);
         while (CheckExist(a,x))
-            x = zipfDistribution(maxAtts, alpha);
+            x = (x + 1) % maxAtts; // Otherwise takes ages to finish for higher values of alpha
+//            x = zipfDistribution(maxAtts, alpha);
         a.push_back(x);
     }
     vector<bool> selectedAttributes;

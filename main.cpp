@@ -32,11 +32,11 @@ using namespace std;
 using json = nlohmann::json;
 
 void evaluate(
-        int atts,            // Number of attributes in total.
-        int constraints_,     // Number of constraints(predicates) in one sub.
-        int m,               // Number of values in one pub.
+        int atts,               // Number of attributes in total.
+        int constraints_,       // Number of constraints(predicates) in one sub.
+        int m,                  // Number of values in one pub.
         double width,           // Interval width
-        int alpha,           // Zipf distribution parameter
+        int alpha,              // Zipf distribution parameter
         double distance_from_mean,           // Interval width
         int valDom,
         int valDis,
@@ -45,7 +45,10 @@ void evaluate(
         const vector<IntervalSub> &subscriptions,
         string outputFileName
 ) {
-    // This is the function that actually constructs and evaluates the algorithms and writes to csv with the results.
+    /* This is the function which evaluates the algorithms.
+     * It is currently responsible for parsing each algorithm's config file. This should be refactored so that
+     * it is the responsibility of each algorithm's constructor.
+     */
 
     Broker* willRun;
     struct AlgorithmRunnable {
@@ -66,10 +69,6 @@ void evaluate(
             int cells = htreeConfig["cells"];
             toRun.emplace_back("H-Tree", new Htree(atts, levels, cells, valDis, valDom), 0);
         }
-//        else if (algo == "Siena")
-//            toRun.emplace_back("Siena", new Siena());
-//        else if (algo == "Vari-Siena")
-//            toRun.emplace_back("Vari-Siena", new VariSiena());
         else if (algo == "ACTree")
         {
             std::ifstream i("./config/algos/ACTree.json");
@@ -127,7 +126,6 @@ void evaluate(
                 int64_t eventTime = matchStart.elapsed_nano();  // Record matching time in nanosecond.
                 matchTimeList.push_back((double) eventTime / 1000000);
                 matchSubList.push_back(matchSubs);
-//                cout << "Matched: " << matchSubs << endl;
             }
 
             // Write output
@@ -147,95 +145,17 @@ void evaluate(
                     Util::Double2String(Util::mean(matchSubList));
             Util::WriteData(outputFileName.c_str(), content);
             cout << content << endl;
-//            cout <<                     Util::Double2String(Util::mean(insertTimeList)) + "," +
-//                                        Util::Double2String(Util::mean(matchTimeList)) + "," +
-//                                        Util::Double2String(Util::mean(matchSubList)) << endl;
 
             toRun.erase(toRun.end());
         }
     }
 }
 
-//
-//void evaluate(
-//        int atts,            // Number of attributes in total.
-//        int constraints_,     // Number of constraints(predicates) in one sub.
-//        int m,               // Number of values in one pub.
-//        int width,           // Interval width
-//        int alpha,           // Zipf distribution parameter
-//        double distance_from_mean,           // Interval width
-//        int valDom,
-//        int valDis,
-//        vector<string> &algos,
-//        const vector<Pub> &events,
-//        const vector<IntervalSub> &subscriptions,
-//        string outputFileName
-//) {
-//    // This is the function that actually constructs and evaluates the algorithms and writes to csv with the results.
-//
-//    SubscriptionClusterTree willRun(0, 3, 20 );
-//    string name = "ACTree";
-//    string algoParam;
-//
-//    vector<double> insertTimeList;
-//    vector<double> matchTimeList;
-//    vector<double> matchSubList;
-//
-//    // Insert operation
-//    for (const auto &subscription : subscriptions) {
-//        Timer subStart;
-//
-//        willRun.insert(subscription);                       // Insert sub[i] into data structure.
-//
-//        int64_t insertTime = subStart.elapsed_nano();   // Record inserting time in nanoseconds
-//        insertTimeList.push_back((double) insertTime / 1000000);
-//    }
-//
-////    willRun.print();
-////    assert(false);
-////
-//
-//    // Stabbing query
-//    for (int i = 0; i < events.size(); i++) {
-//        int matchSubs = 0;                              // Record the number of matched subscriptions.
-//        Timer matchStart;
-//
-//        willRun.match(events.at(i), matchSubs, subscriptions);
-//
-//        int64_t eventTime = matchStart.elapsed_nano();  // Record matching time in nanosecond.
-//        matchTimeList.push_back((double) eventTime / 1000000);
-//        matchSubList.push_back(matchSubs);
-////                cout << "Matched: " << matchSubs << endl;
-//    }
-//
-//    // Write output
-//    cout.precision(3);
-//    string content =
-//            name + "," +
-//            Util::Int2String(subscriptions.size()) + "," +
-//            Util::Int2String(atts) + "," +
-//            Util::Int2String(constraints_) + "," +
-//            std::to_string(alpha) + "," +
-//            Util::Int2String(m) + "," +
-//            std::to_string(width) + "," +
-//            std::to_string(distance_from_mean) + "," +
-//            Util::Double2String(Util::mean(insertTimeList)) + "," +
-//            Util::Double2String(Util::mean(matchTimeList)) + "," +
-//            Util::Double2String(Util::mean(matchSubList));
-//    Util::WriteData(outputFileName.c_str(), content);
-//    cout << content << endl;
-////            cout <<                     Util::Double2String(Util::mean(insertTimeList)) + "," +
-////                                        Util::Double2String(Util::mean(matchTimeList)) + "," +
-////                                        Util::Double2String(Util::mean(matchSubList)) << endl;
-//
-//}
-
-void evaluateUsingSyntheticData(json j, string outputFileName) {
-    /* As the name implies, this function will read the json file parameters,
-     * and use that to generate purely synthetic data, with which it then
-     * calls the evaluator.
-     * */
-
+void evaluateUsingSyntheticData(json j, string outputFileName, int datasetIndex, int experimentIndex){
+    /*
+     * Carries out the experiment as defined in the config file.
+     * This is basically the main() function of the old codebase.
+     */
     cout << "Evaluating using synthetic data." << endl;
 
     // Parsing and casting from json
@@ -288,17 +208,19 @@ void evaluateUsingSyntheticData(json j, string outputFileName) {
     }
 }
 
-void evaluateUsingDataAugmentation(json j, string outputFileName){
+void evaluateUsingDataAugmentation(json j, string outputFileName,  int datasetIndex, int experimentIndex){
     /* As the name implies, this function will read the generated CSV, and
      * generate subscriptions and events by adding and subtracting the std. deviation
      * from the given values according to the parameters.
      * Then it passes this to the evaluator.
+     * The part which 'finishes off' the data augmentation should be split off at some point,
+     * and this function should just be in charge of orchestration.
     */
 
-    static string augmentedDataDirectory = j["params"]["output_data"]; // This is necessary so that it can be used in a struct later
-
-//    vector<double> widths = j["width"];                               // Width of a predicate.
-//    int number_of_constraints = j["number_of_constraints"];
+    static string   augmentedDataDirectory  = j["output_data"]; // This is necessary so that it can be used in a struct later
+    vector<double>  widths                  = j["datasets"][datasetIndex]["experiments"][experimentIndex]["width"];
+    vector<double>  alphas                  = j["datasets"][datasetIndex]["experiments"][experimentIndex]["alpha"];
+    vector<int>     numbers_of_constraints  = j["datasets"][datasetIndex]["experiments"][experimentIndex]["number_of_constraints"];
 
     cout << "Evaluating using augmented data." << endl;
 
@@ -346,9 +268,9 @@ void evaluateUsingDataAugmentation(json j, string outputFileName){
     {
         struct AugmentedDataFile {
             string timestamp;
-            string subscriptions()  { return augmentedDataDirectory + "subscriptions/" + timestamp + ".csv"; }
-            string config()         { return augmentedDataDirectory + "subscriptions/" + timestamp + ".json"; }
-            explicit AugmentedDataFile(string timestamp) : timestamp(timestamp){};
+            string subscriptions() { return augmentedDataDirectory + "subscriptions/" + timestamp + ".csv"; }
+            string config() { return augmentedDataDirectory + "subscriptions/" + timestamp + ".json"; }
+            explicit AugmentedDataFile(string timestamp) : timestamp(timestamp) {};
         };
 
         vector<AugmentedDataFile> augmentedDataFiles;
@@ -356,14 +278,14 @@ void evaluateUsingDataAugmentation(json j, string outputFileName){
         // Rather ugly C code to read files in directory using dirent.h (only works on POSIX)
         // Since this is the only place in the codebase where it is used, it stays here.
         // Otherwise it would make sense to throw it into a helper function in the common module.
-        DIR             *dir;
-        struct dirent   *ent;
+        DIR *dir;
+        struct dirent *ent;
 
         if ((dir = opendir("./data/augmented/subscriptions")) != NULL) {
             while ((ent = readdir(dir)) != NULL) {
                 if (std::regex_match(ent->d_name, std::regex("(.*)(.json)"))) {
                     string timestamp = ent->d_name;
-                    string timestampParsed = timestamp.substr(0,timestamp.find("."));
+                    string timestampParsed = timestamp.substr(0, timestamp.find("."));
                     augmentedDataFiles.emplace_back(timestampParsed);
                 }
             }
@@ -384,88 +306,102 @@ void evaluateUsingDataAugmentation(json j, string outputFileName){
             std::ifstream i(augmentedDataFile.config());
             i >> config;
 
-            unsigned    number_of_subscriptions  = config["number_of_subscriptions"];
-            double      width                    = config["width"];
-            unsigned    maxAtts                  = config["maxAtts"];
-            unsigned    alpha                    = config["alpha"];
-            double      distance_from_mean       = config["distance_from_mean"];
-            unsigned    number_of_constraints    = config["number_of_constraints"];
+            unsigned    number_of_subscriptions = config["number_of_subscriptions"];
+            unsigned    maxAtts = config["maxAtts"];
+            double      distance_from_mean = config["distance_from_mean"];
 
-            cout << "Number of subscriptions: " << number_of_subscriptions << endl;
-            cout << "Number of constraints: "   << number_of_constraints << endl;
-            cout << "Width: "                   << width << endl;
-            cout << "Distance from mean: "      << distance_from_mean << endl;
+            for (double width = widths[0]; width <= widths[1]; width += widths[2]) {
+                for (double alpha = alphas[0]; alpha <= alphas[1]; alpha += alphas[2]) {
+                    for (int number_of_constraints = numbers_of_constraints[0]; number_of_constraints <= numbers_of_constraints[1]; number_of_constraints += numbers_of_constraints[2]) {
 
-            vector<IntervalSub> subscriptions;
+                        cout << "Number of subscriptions: " << number_of_subscriptions << endl;
+                        cout << "Number of constraints: " << number_of_constraints << endl;
+                        cout << "Width: " << width << endl;
+                        cout << "Alpha: " << alpha << endl;
+                        cout << "Distance from mean: " << distance_from_mean << endl;
 
-            std::ifstream f(augmentedDataFile.subscriptions());
-            aria::csv::CsvParser parser = aria::csv::CsvParser(f).delimiter(' ');
+                        vector<IntervalSub> subscriptions;
 
-            int id = 1;
-            for (auto &row : parser) {
-                int attribute = 0;
-                vector<bool> zipfAttributes = gen.GenZipfAtts(maxAtts,alpha,number_of_constraints);
-                IntervalSub sub;
-                sub.id = id, sub.size = 0;
-                for (auto &field : row) {
-                    if (zipfAttributes[attribute]) {
-                        IntervalCnt interval;
+                        std::ifstream f(augmentedDataFile.subscriptions());
+                        aria::csv::CsvParser parser = aria::csv::CsvParser(f).delimiter(' ');
 
-                        interval.att = attribute;
-                        double stdDevTimeWidth  = width * standard_deviations[attribute];
-                        interval.highValue      = Util::safeValue(100 * (stof(field) + (stdDevTimeWidth/2.0)) +5000);
-                        interval.lowValue       = Util::safeValue(100 * (stoi(field) - (stdDevTimeWidth/2.0)) +5000);
+                        int id = 1;
+                        for (auto &row : parser) {
+                            int attribute = 0;
+                            vector<bool> zipfAttributes = gen.GenZipfAtts(maxAtts, alpha, number_of_constraints);
+                            IntervalSub sub;
+                            sub.id = id, sub.size = 0;
+                            for (auto &field : row) {
+                                if (zipfAttributes[attribute]) {
+                                    IntervalCnt interval;
 
-                        sub.constraints.push_back(interval);
-                        ++sub.size;
+                                    interval.att = attribute;
+                                    double stdDevTimeWidth = width * standard_deviations[attribute];
+                                    interval.highValue = Util::safeValue(
+                                            100 * (stof(field) + (stdDevTimeWidth / 2.0)) + 5000);
+                                    interval.lowValue = Util::safeValue(
+                                            100 * (stoi(field) - (stdDevTimeWidth / 2.0)) + 5000);
+
+                                    sub.constraints.push_back(interval);
+                                    ++sub.size;
+                                }
+                                ++attribute;
+                            }
+                            subscriptions.push_back(sub);
+                            ++id;
+                        }
+                        vector<string> algos = j["datasets"][datasetIndex]["params"]["algos"];
+
+                        for (auto constraint : subscriptions[0].constraints) {
+                            cout << constraint.att << ": (" << constraint.lowValue << ", " << constraint.highValue
+                                 << "), ";
+                        }
+                        cout << "Size:" << subscriptions[0].size << endl;
+
+                        const vector<Pub> &const_events = events;
+                        const vector<IntervalSub> &const_subscriptions = subscriptions;
+                        vector<double> constraintsAmount;
+
+                        for (auto sub : subscriptions) constraintsAmount.push_back(sub.size);
+
+                        evaluate(Util::mean(events_attributes),            // Number of attributes in total.
+                                 Util::mean(
+                                         constraintsAmount),           // Number of constraints(predicates) in one sub.
+                                 Util::mean(events_attributes),            // Number of values in one pub.
+                                 width,                                    // Interval width
+                                 alpha,
+                                 distance_from_mean,
+                                 MAX_CARDINALITY,
+                                 0,
+                                 algos,
+                                 const_events,
+                                 const_subscriptions,
+                                 outputFileName
+                        );
                     }
-                    ++attribute;
                 }
-                subscriptions.push_back(sub);
-                ++id;
             }
-            vector<string> algos = j["algos"];
-
-
-
-            for (auto constraint : subscriptions[0].constraints) {
-                cout << constraint.att << ": (" << constraint.lowValue << ", " << constraint.highValue << "), ";
-            }
-            cout << "Size:" << subscriptions[0].size << endl;
-
-            const vector<Pub> &const_events = events;
-            const vector<IntervalSub> &const_subscriptions = subscriptions;
-            vector<double> constraintsAmount;
-
-            for (auto sub : subscriptions) constraintsAmount.push_back(sub.size);
-
-            evaluate(Util::mean(events_attributes),            // Number of attributes in total.
-                     Util::mean(constraintsAmount),           // Number of constraints(predicates) in one sub.
-                     Util::mean(events_attributes),            // Number of values in one pub.
-                     width,                                    // Interval width
-                     distance_from_mean,
-                     alpha,
-                     MAX_CARDINALITY,
-                     0,
-                     algos,
-                     const_events,
-                     const_subscriptions,
-                     outputFileName
-            );
         }
     }
 }
 
 int main(int argc, char **argv) {
+    string configFilename = "config/config.json";
+    int datasetIndex = 0;
+    int experimentIndex = 0;
 
-    if (argc != 2){
-        perror(" Please supply a single argument with the location of your configuration file!");
-        return 1;
+    if (argc != 4) {
+        cout << " Arguments not supplied, falling back on defaults." << endl;
+        cout << " Usage: ./pubsub <location of configuration file> <dataset index> <experiment index>" << endl;
+    } else {
+        configFilename = argv[1];
+        datasetIndex = stoi(argv[2]);
+        experimentIndex = stoi(argv[3]);
     }
 
     json config;
 
-    std::ifstream i(argv[1]);
+    std::ifstream i(configFilename);
     i >> config;
 
     string mode = config["mode"];
@@ -480,11 +416,14 @@ int main(int argc, char **argv) {
     string      outputFileName      = "./output/" + std::to_string(timestamp) + ".csv";
     string      configCopyFileName  = "./output/" + std::to_string(timestamp) + ".json";
 
-    // Copy config.
+    // Write metadata
     std::ofstream  dst(configCopyFileName, std::ios::binary);
-    i.clear();
-    i.seekg(0);
-    dst << i.rdbuf();
+
+    json metadata           = config["datasets"][datasetIndex]["experiments"][experimentIndex];
+    metadata["event_type"]  = "experiment";
+    metadata["timestamp"]   = timestamp;
+
+    dst << metadata;
     dst.close();
 
     // Prep csv
@@ -492,12 +431,11 @@ int main(int argc, char **argv) {
     Util::WriteData(outputFileName.c_str(), header);
 
     if (mode == "synthetic"){
-        evaluateUsingSyntheticData(config, outputFileName);
+        evaluateUsingSyntheticData(config, outputFileName, datasetIndex, experimentIndex);
     } else if (mode == "augmentation"){
-        evaluateUsingDataAugmentation(config,  outputFileName);
+        evaluateUsingDataAugmentation(config,  outputFileName, datasetIndex, experimentIndex);
     }
 
     return 0;
-
 }
 
