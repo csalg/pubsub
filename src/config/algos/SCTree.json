@@ -1,0 +1,7 @@
+{
+	"MAX_SPAN": 200,
+	"SPAN_AFTER_CLUSTERING": 100,
+	"K": 20,
+	"LEAVE_OUT": 0,
+	"THREADS": 3
+}
